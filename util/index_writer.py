@@ -89,7 +89,7 @@ class FastForwardIndexWriter(IndexWriter):
         if self.index is None:
             ff_index_file = self.target_dir / "ff_index.h5"
             LOGGER.info("creating %s", ff_index_file)
-            self.index = OnDiskIndex(ff_index_file)
+            self.index = OnDiskIndex(ff_index_file, overwrite=True)
 
         while True:
             item = q.get()
