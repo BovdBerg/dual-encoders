@@ -113,7 +113,7 @@ class StandaloneEncoder(FFEncoder):
             rep = self.encoder({k: v.to(self.device) for k, v in inputs.items()})
             if self.projection is not None:
                 rep = self.projection(rep)
-            return torch.nn.functional.normalize(rep).detach().numpy()
+            return torch.nn.functional.normalize(rep).detach().cpu().numpy()
 
     def __call__(self, texts: Sequence[str]) -> np.ndarray:
         return self._encode(self.tokenizer(texts))
