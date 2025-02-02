@@ -1,0 +1,11 @@
+tokenizer:
+  _target_: model.transformer.TransformerTokenizer
+  pretrained_model: bert-base-uncased
+  max_length: 512
+
+encoder:
+  _target_: model.estimator.AvgEmbQueryEstimator
+  n_docs: 10
+  tok_w_method: LEARNED
+  # q_only: True
+  # normalize_q_emb_1: True

@@ -1,6 +1,8 @@
 _target_: pytorch_lightning.Trainer
 deterministic: warn
 strategy: auto
+limit_val_batches: 1000
+val_check_interval: 0.25
 max_epochs: 50
 callbacks:
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor

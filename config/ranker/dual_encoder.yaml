@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - encoder@query_encoder: transformer
+  - encoder@query_encoder: estimator
   - encoder@doc_encoder: transformer
 
 model:
