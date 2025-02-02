@@ -23,7 +23,7 @@ class WEIGHT_METHOD(Enum):
     LEARNED = "LEARNED"
 
 
-class TransformerEmbeddingEncoder(Encoder):
+class AvgEmbQueryEstimator(Encoder):
     """
     Estimate query embeddings as the weighted average of:
         - lightweight semantic query estimation.
