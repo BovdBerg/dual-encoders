@@ -26,7 +26,7 @@ def create_lexical_ranking(config):
     cache_dir = dataset_cache_path / f"ranking_cache_{cache_n_docs}docs"
     os.makedirs(cache_dir, exist_ok=True)
     chunk_size = 10_000
-    n_docs = config.ranker.model.encoder.n_docs
+    n_docs = config.ranker.model.query_encoder.n_docs
 
     val_topics = pt.get_dataset("irds:msmarco-passage/eval").get_topics()
     train_topics = pt.get_dataset("irds:msmarco-passage/train").get_topics()
