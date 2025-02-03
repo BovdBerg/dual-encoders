@@ -29,7 +29,7 @@ def create_lexical_ranking(n_docs, val_samples = None):
 
     train_topics = pt.get_dataset("irds:msmarco-passage/train").get_topics()
     val_topics = pt.get_dataset("irds:msmarco-passage/eval").get_topics()
-    if val_samples is not None:
+    if val_samples is not None and val_samples != 1.0:
         val_topics = val_topics.sample(n=val_samples, random_state=42)
     all_topics = pd.concat([val_topics, train_topics])
     queries_path = dataset_cache_path / f"{len(all_topics)}_topics.csv"
