@@ -78,6 +78,14 @@ def create_lexical_ranking(n_docs):
     return Ranking(res_df).cut(n_docs)
 
 
+def load_index(index_path):
+    index = OnDiskIndex.load(index_path)
+    if args.storage == "mem":
+        index = index.to_memory(2**15)
+
+    return index
+
+
 @hydra.main(config_path="config", config_name="training", version_base="1.3")
 def main(config: DictConfig) -> None:
     seed_everything(config.random_seed, workers=True)
@@ -91,6 +99,7 @@ def main(config: DictConfig) -> None:
     if config.ranker.query_encoder == "estimator":
         pt.init()
         ranking = create_lexical_ranking(config.ranker.query_encoder.n_docs)
+        index = load_index(config.ranker.query_encoder.index_path)
         model.ranking = ranking
 
     if config.ckpt_path is not None:
