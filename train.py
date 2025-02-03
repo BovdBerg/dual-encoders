@@ -8,14 +8,16 @@ from pathlib import Path
 
 import hydra
 import pandas as pd
+import pyterrier as pt
 import torch
 from fast_forward.ranking import Ranking
 from hydra.utils import instantiate
 from omegaconf import DictConfig
-import pyterrier as pt
 from pytorch_lightning import seed_everything
 from ranking_utils.model import TrainingMode
 from tqdm import tqdm
+
+from model import estimator, transformer
 
 
 def create_lexical_ranking(config):
