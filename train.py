@@ -11,6 +11,7 @@ import pandas as pd
 import pyterrier as pt
 import torch
 from fast_forward.ranking import Ranking
+from fast_forward.index.disk import OnDiskIndex
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from pytorch_lightning import seed_everything
@@ -102,7 +103,7 @@ def main(config: DictConfig) -> None:
         pt.init()
         ranking = create_lexical_ranking(q_enc.n_docs)
         q_enc.ranking = ranking
-        index = load_index(config.ranker.query_encoder.index_path)
+        index = load_index(Path(config.ranker.query_encoder.index_path))
         q_enc.index = index
 
     if config.ckpt_path is not None:
