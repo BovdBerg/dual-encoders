@@ -10,4 +10,4 @@ encoder:
   # q_only: True
   # normalize_q_emb_1: True
 
-index_path: /scratch/bovandenberg/indexes/msm-psg/ff_index_msmpsg_TCTColBERT.h5
+index_path: /scratch/bovandenberg/indices/msm-psg/ff_index_msmpsg_TCTColBERT.h5
