@@ -102,7 +102,7 @@ def main(config: DictConfig) -> None:
         pt.init()
         ranking = create_lexical_ranking(q_enc.n_docs)
         q_enc.ranking = ranking
-        index = load_index(q_enc.index_path)
+        index = load_index(config.ranker.query_encoder.index_path)
         q_enc.index = index
 
     if config.ckpt_path is not None:
