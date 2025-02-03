@@ -20,15 +20,12 @@ from tqdm import tqdm
 from model import estimator, transformer
 
 
-def create_lexical_ranking(config):
-    pt.init()
-
+def create_lexical_ranking(n_docs):
     cache_n_docs = 50
-    dataset_cache_path = Path("/scratch/bovandenberg/fast-forward-indexes/data/q-to-rep/tct")
+    dataset_cache_path = Path("/home/bvdb9/fast-forward-indexes/data/q-to-rep/tct")
     cache_dir = dataset_cache_path / f"ranking_cache_{cache_n_docs}docs"
     os.makedirs(cache_dir, exist_ok=True)
     chunk_size = 10_000
-    n_docs = config.ranker.query_encoder.n_docs
 
     val_topics = pt.get_dataset("irds:msmarco-passage/eval").get_topics()
     train_topics = pt.get_dataset("irds:msmarco-passage/train").get_topics()
@@ -92,7 +89,8 @@ def main(config: DictConfig) -> None:
     model = instantiate(config.ranker.model)
 
     if config.ranker.query_encoder == "estimator":
-        ranking = create_lexical_ranking(config)
+        pt.init()
+        ranking = create_lexical_ranking(config.ranker.query_encoder.n_docs)
         model.ranking = ranking
 
     if config.ckpt_path is not None:
