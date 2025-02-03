@@ -20,7 +20,7 @@ from tqdm import tqdm
 from model.estimator import AvgEmbQueryEstimator
 
 
-def create_lexical_ranking(n_docs, val_samples = None):
+def create_lexical_ranking(n_docs):
     cache_n_docs = 50
     dataset_cache_path = Path("/home/bvdb9/fast-forward-indexes/data/q-to-rep/tct")
     cache_dir = dataset_cache_path / f"ranking_cache_{cache_n_docs}docs"
@@ -29,9 +29,8 @@ def create_lexical_ranking(n_docs, val_samples = None):
 
     train_topics = pt.get_dataset("irds:msmarco-passage/train").get_topics()
     val_topics = pt.get_dataset("irds:msmarco-passage/eval").get_topics()
-    if val_samples is not None and val_samples != 1.0:
-        val_topics = val_topics.sample(n=val_samples, random_state=42)
-    all_topics = pd.concat([val_topics, train_topics])
+    val_head = val_topics.sample(n=1000, random_state=42)  # Because my local data used 1k val samples first
+    all_topics = pd.concat([val_head, train_topics, val_topics])
     queries_path = dataset_cache_path / f"{len(all_topics)}_topics.csv"
     all_topics.to_csv(queries_path, index=False)
 
@@ -101,7 +100,7 @@ def main(config: DictConfig) -> None:
     q_enc = model.query_encoder
     if isinstance(q_enc, AvgEmbQueryEstimator):
         pt.init()
-        ranking = create_lexical_ranking(q_enc.n_docs, trainer.limit_val_batches)
+        ranking = create_lexical_ranking(q_enc.n_docs)
         q_enc.ranking = ranking
         index = load_index(q_enc.index_path)
         q_enc.index = index
