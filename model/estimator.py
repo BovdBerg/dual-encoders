@@ -1,9 +1,10 @@
+from enum import Enum
 from typing import Dict, Optional, Sequence
 
 import torch
 from fast_forward.index import Index
 from fast_forward.ranking import Ranking
-from transformers import AutoModel
+from transformers import AutoModel, AutoTokenizer
 
 from model import Encoder
 
@@ -39,8 +40,8 @@ class AvgEmbQueryEstimator(Encoder):
 
     def __init__(
         self,
-        index: Index,
         n_docs: int,
+        index: Index = None,
         tok_w_method: WEIGHT_METHOD = WEIGHT_METHOD.LEARNED,
         docs_only: bool = False,
         q_only: bool = False,
@@ -50,8 +51,8 @@ class AvgEmbQueryEstimator(Encoder):
         """Constructor.
 
         Args:
-            index (Index): The index containing document embeddings.
             n_docs (int): The number of top-ranked documents to average.
+            index (Index): The index containing document embeddings.
             tok_w_method (TOKEN_WEIGHT_METHOD): The method to use for token weighting.
             docs_only (bool): Whether to disable the lightweight query estimation and only use the top-ranked documents.
             q_only (bool): Whether to only use the lightweight query estimation and not the top-ranked documents.
@@ -59,8 +60,8 @@ class AvgEmbQueryEstimator(Encoder):
             normalize_q_emb_2 (bool): Whether to normalize the final query embedding.
         """
         super().__init__()
-        self.index = index
         self.n_docs = n_docs
+        self.index = index
         self.tok_w_method = tok_w_method
         self.docs_only = docs_only
         self.q_only = q_only
