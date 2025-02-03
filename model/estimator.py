@@ -69,6 +69,7 @@ class AvgEmbQueryEstimator(Encoder):
         self.normalize_q_emb_2 = normalize_q_emb_2
         self.pretrained_model = "bert-base-uncased"
         self._ranking = None
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.pretrained_model)
         vocab_size = self.tokenizer.vocab_size
@@ -86,8 +87,8 @@ class AvgEmbQueryEstimator(Encoder):
         assert self.index.dim is not None, "Index dimension cannot be None."
 
         # Create tensors for padding and total embedding counts
-        d_embs_pad = torch.zeros((len(queries), self.n_docs, 768))
-        n_embs_per_q = torch.ones((len(queries)), dtype=torch.int)
+        d_embs_pad = torch.zeros((len(queries), self.n_docs, 768)).to(self.device)
+        n_embs_per_q = torch.ones((len(queries)), dtype=torch.int).to(self.device)
 
         # Retrieve the top-ranked documents for all queries
         top_docs = self.ranking._df[self.ranking._df["query"].isin(queries)]
@@ -107,12 +108,13 @@ class AvgEmbQueryEstimator(Encoder):
         return d_embs_pad, n_embs_per_q
 
     def forward(self, q_tokens: EncodingModelBatch) -> torch.Tensor:
-        batch_size = len(q_tokens)
+        input_ids = q_tokens["input_ids"]
+        attention_mask = q_tokens["attention_mask"]
+        batch_size = len(input_ids)
+
         if self.docs_only:
             q_emb_1 = torch.zeros((batch_size, 768))
         else:
-            input_ids = q_tokens["input_ids"]
-            attention_mask = q_tokens["attention_mask"]
 
             # estimate lightweight query as weighted average of q_tok_embs
             q_tok_embs = self.tok_embs(input_ids)
@@ -138,8 +140,8 @@ class AvgEmbQueryEstimator(Encoder):
         d_embs_pad, n_embs_per_q = self._get_top_docs(queries)
 
         # estimate query embedding as weighted average of q_emb and d_embs
-        embs = torch.cat((q_emb_1.unsqueeze(1), d_embs_pad), -2)
-        embs_weights = torch.zeros((batch_size, embs.shape[-2]))
+        embs = torch.cat((q_emb_1.unsqueeze(1), d_embs_pad), -2).to(self.device)
+        embs_weights = torch.zeros((batch_size, embs.shape[-2])).to(self.device)
         # assign self.embs_weights to embs_weights, but only up to the number of top-ranked documents per query
         for i, n_embs in enumerate(n_embs_per_q):
             if self.docs_only:
