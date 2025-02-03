@@ -82,9 +82,7 @@ def create_lexical_ranking(n_docs):
 
 def load_index(index_path):
     index = OnDiskIndex.load(index_path)
-    if args.storage == "mem":
-        index = index.to_memory(2**15)
-
+    index = index.to_memory(2**15)
     return index
 
 
