@@ -14,3 +14,4 @@ tensorboardx==2.2
 numpy==1.26.0
 fsspec==2023.12.2
 python-terrier==0.10.1
+protobuf==3.20.3
