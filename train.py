@@ -17,18 +17,20 @@ from pytorch_lightning import seed_everything
 from ranking_utils.model import TrainingMode
 from tqdm import tqdm
 
-from model import estimator, transformer
+from model.estimator import AvgEmbQueryEstimator
 
 
-def create_lexical_ranking(n_docs):
+def create_lexical_ranking(n_docs, val_samples = None):
     cache_n_docs = 50
     dataset_cache_path = Path("/home/bvdb9/fast-forward-indexes/data/q-to-rep/tct")
     cache_dir = dataset_cache_path / f"ranking_cache_{cache_n_docs}docs"
     os.makedirs(cache_dir, exist_ok=True)
     chunk_size = 10_000
 
-    val_topics = pt.get_dataset("irds:msmarco-passage/eval").get_topics()
     train_topics = pt.get_dataset("irds:msmarco-passage/train").get_topics()
+    val_topics = pt.get_dataset("irds:msmarco-passage/eval").get_topics()
+    if val_samples:
+        val_topics = val_topics.sample(n=val_samples, random_state=42)
     all_topics = pd.concat([val_topics, train_topics])
     queries_path = dataset_cache_path / f"{len(all_topics)}_topics.csv"
     all_topics.to_csv(queries_path, index=False)
@@ -96,11 +98,13 @@ def main(config: DictConfig) -> None:
     trainer = instantiate(config.trainer)
     model = instantiate(config.ranker.model)
 
-    if config.ranker.query_encoder == "estimator":
+    q_enc = model.query_encoder
+    if isinstance(q_enc, AvgEmbQueryEstimator):
         pt.init()
-        ranking = create_lexical_ranking(config.ranker.query_encoder.n_docs)
-        index = load_index(config.ranker.query_encoder.index_path)
-        model.ranking = ranking
+        ranking = create_lexical_ranking(q_enc.n_docs, trainer.limit_val_batches)
+        q_enc.ranking = ranking
+        index = load_index(q_enc.index_path)
+        q_enc.index = index
 
     if config.ckpt_path is not None:
         model.load_state_dict(torch.load(config.ckpt_path)["state_dict"])
