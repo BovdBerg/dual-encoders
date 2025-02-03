@@ -8,4 +8,4 @@ encoder:
   pretrained_model: ${..pretrained_model}
   dense_layer_dim: null
 
-pretrained_model: bert-base-uncased
+pretrained_model: castorini/tct_colbert-msmarco
