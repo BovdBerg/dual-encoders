@@ -22,7 +22,7 @@ from model.estimator import AvgEmbQueryEstimator
 
 def create_lexical_ranking(n_docs):
     cache_n_docs = 50
-    dataset_cache_path = Path("/home/bvdb9/fast-forward-indexes/data/q-to-rep/tct")
+    dataset_cache_path = Path("/scratch/bovandenberg/fast-forward-indexes/data/q-to-rep/tct")
     cache_dir = dataset_cache_path / f"ranking_cache_{cache_n_docs}docs"
     os.makedirs(cache_dir, exist_ok=True)
     chunk_size = 10_000
