@@ -112,3 +112,5 @@ venv.bak/
 .ignore/
 
 outputs/
+
+lightning_logs/
