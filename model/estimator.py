@@ -70,8 +70,8 @@ class AvgEmbQueryEstimator(Encoder):
         self.pretrained_model = "bert-base-uncased"
         self._ranking = None
 
-        tokenizer = AutoTokenizer.from_pretrained(self.pretrained_model)
-        vocab_size = tokenizer.vocab_size
+        self.tokenizer = AutoTokenizer.from_pretrained(self.pretrained_model)
+        vocab_size = self.tokenizer.vocab_size
 
         model = AutoModel.from_pretrained(self.pretrained_model, return_dict=True)
         self.tok_embs = model.get_input_embeddings()
@@ -111,16 +111,8 @@ class AvgEmbQueryEstimator(Encoder):
         if self.docs_only:
             q_emb_1 = torch.zeros((batch_size, 768))
         else:
-            # Tokenizer queries
-            q_tokens = self.tokenizer(
-                list(queries),
-                padding=True,
-                return_tensors="pt",
-                add_special_tokens=self.add_special_tokens,
-            ).to(self.device)
-
-            input_ids = q_tokens["input_ids"].to(self.device)
-            attention_mask = q_tokens["attention_mask"].to(self.device)
+            input_ids = q_tokens["input_ids"]
+            attention_mask = q_tokens["attention_mask"]
 
             # estimate lightweight query as weighted average of q_tok_embs
             q_tok_embs = self.tok_embs(input_ids)
@@ -142,6 +134,7 @@ class AvgEmbQueryEstimator(Encoder):
             return q_emb_1
 
         # lookup embeddings of top-ranked documents in (in-memory) self.index
+        queries = self.tokenizer.batch_decode(input_ids, skip_special_tokens=True)
         d_embs_pad, n_embs_per_q = self._get_top_docs(queries)
 
         # estimate query embedding as weighted average of q_emb and d_embs
