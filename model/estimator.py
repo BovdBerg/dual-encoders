@@ -42,7 +42,7 @@ class AvgEmbQueryEstimator(Encoder):
         self,
         n_docs: int,
         index: Index = None,
-        tok_w_method: WEIGHT_METHOD = WEIGHT_METHOD.LEARNED,
+        tok_w_method: str = "LEARNED",
         docs_only: bool = False,
         q_only: bool = False,
         normalize_q_emb_1: bool = False,
@@ -62,7 +62,7 @@ class AvgEmbQueryEstimator(Encoder):
         super().__init__()
         self.n_docs = n_docs
         self.index = index
-        self.tok_w_method = tok_w_method
+        self.tok_w_method = WEIGHT_METHOD(tok_w_method)
         self.docs_only = docs_only
         self.q_only = q_only
         self.normalize_q_emb_1 = normalize_q_emb_1
