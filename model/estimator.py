@@ -86,8 +86,8 @@ class AvgEmbQueryEstimator(Encoder):
         assert self.index.dim is not None, "Index dimension cannot be None."
 
         # Create tensors for padding and total embedding counts
-        d_embs_pad = torch.zeros((len(queries), self.n_docs, 768), device=self.device)
-        n_embs_per_q = torch.ones((len(queries)), dtype=torch.int, device=self.device)
+        d_embs_pad = torch.zeros((len(queries), self.n_docs, 768))
+        n_embs_per_q = torch.ones((len(queries)), dtype=torch.int)
 
         # Retrieve the top-ranked documents for all queries
         top_docs = self.ranking._df[self.ranking._df["query"].isin(queries)]
@@ -97,7 +97,7 @@ class AvgEmbQueryEstimator(Encoder):
             d_embs, d_idxs = self.index._get_vectors(group["id"].unique())
             if self.index.quantizer is not None:
                 d_embs = self.index.quantizer.decode(d_embs)
-            d_embs = torch.tensor(d_embs[[x[0] for x in d_idxs]], device=self.device)
+            d_embs = torch.tensor(d_embs[[x[0] for x in d_idxs]])
 
             # Pad and count embeddings for this query
             query_idx = query_to_idx[str(query)]
@@ -106,9 +106,10 @@ class AvgEmbQueryEstimator(Encoder):
 
         return d_embs_pad, n_embs_per_q
 
-    def forward(self, batch: EncodingModelBatch) -> torch.Tensor:
+    def forward(self, q_tokens: EncodingModelBatch) -> torch.Tensor:
+        batch_size = len(q_tokens)
         if self.docs_only:
-            q_emb_1 = torch.zeros((len(queries), 768), device=self.device)
+            q_emb_1 = torch.zeros((batch_size, 768))
         else:
             # Tokenizer queries
             q_tokens = self.tokenizer(
@@ -145,7 +146,7 @@ class AvgEmbQueryEstimator(Encoder):
 
         # estimate query embedding as weighted average of q_emb and d_embs
         embs = torch.cat((q_emb_1.unsqueeze(1), d_embs_pad), -2)
-        embs_weights = torch.zeros((len(queries), embs.shape[-2]), device=self.device)
+        embs_weights = torch.zeros((batch_size, embs.shape[-2]))
         # assign self.embs_weights to embs_weights, but only up to the number of top-ranked documents per query
         for i, n_embs in enumerate(n_embs_per_q):
             if self.docs_only:
