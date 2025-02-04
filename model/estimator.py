@@ -6,8 +6,6 @@ from fast_forward.index import Index
 from fast_forward.ranking import Ranking
 from transformers import AutoModel, AutoTokenizer
 
-from model import Encoder
-
 EncodingModelBatch = Dict[str, torch.LongTensor]
 
 
@@ -24,7 +22,7 @@ class WEIGHT_METHOD(Enum):
     LEARNED = "LEARNED"
 
 
-class AvgEmbQueryEstimator(Encoder):
+class AvgEmbQueryEstimator(torch.nn.Module):
     """
     Estimate query embeddings as the weighted average of:
         - lightweight semantic query estimation.
@@ -41,7 +39,6 @@ class AvgEmbQueryEstimator(Encoder):
     def __init__(
         self,
         n_docs: int,
-        index: Index = None,
         tok_w_method: str = "LEARNED",
         docs_only: bool = False,
         q_only: bool = False,
@@ -52,7 +49,6 @@ class AvgEmbQueryEstimator(Encoder):
 
         Args:
             n_docs (int): The number of top-ranked documents to average.
-            index (Index): The index containing document embeddings.
             tok_w_method (TOKEN_WEIGHT_METHOD): The method to use for token weighting.
             docs_only (bool): Whether to disable the lightweight query estimation and only use the top-ranked documents.
             q_only (bool): Whether to only use the lightweight query estimation and not the top-ranked documents.
@@ -61,13 +57,13 @@ class AvgEmbQueryEstimator(Encoder):
         """
         super().__init__()
         self.n_docs = n_docs
-        self.index = index
         self.tok_w_method = WEIGHT_METHOD(tok_w_method)
         self.docs_only = docs_only
         self.q_only = q_only
         self.normalize_q_emb_1 = normalize_q_emb_1
         self.normalize_q_emb_2 = normalize_q_emb_2
         self.pretrained_model = "bert-base-uncased"
+        self.doc_encoder = None
         self._ranking = None
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -84,7 +80,7 @@ class AvgEmbQueryEstimator(Encoder):
 
     def _get_top_docs(self, queries: Sequence[str]):
         assert self.ranking is not None, "Provide a ranking before encoding."
-        assert self.index.dim is not None, "Index dimension cannot be None."
+        assert self.doc_encoder is not None, "Provide a doc_encoder before encoding."
 
         # Create tensors for padding and total embedding counts
         d_embs_pad = torch.zeros((len(queries), self.n_docs, 768)).to(self.device)
@@ -95,6 +91,7 @@ class AvgEmbQueryEstimator(Encoder):
         query_to_idx = {query: idx for idx, query in enumerate(queries)}
 
         for query, group in top_docs.groupby("query"):
+            # TODO: Get the embeddings for the top-ranked documents from doc_encoder
             d_embs, d_idxs = self.index._get_vectors(group["id"].unique())
             if self.index.quantizer is not None:
                 d_embs = self.index.quantizer.decode(d_embs)

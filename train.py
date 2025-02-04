@@ -11,7 +11,6 @@ import pandas as pd
 import pyterrier as pt
 import torch
 from fast_forward.ranking import Ranking
-from fast_forward.index.disk import OnDiskIndex
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from pytorch_lightning import seed_everything
@@ -81,12 +80,6 @@ def create_lexical_ranking(n_docs):
     return Ranking(res_df).cut(n_docs)
 
 
-def load_index(index_path):
-    index = OnDiskIndex.load(index_path)
-    index = index.to_memory(2**15)
-    return index
-
-
 @hydra.main(config_path="config", config_name="training", version_base="1.3")
 def main(config: DictConfig) -> None:
     seed_everything(config.random_seed, workers=True)
@@ -102,8 +95,6 @@ def main(config: DictConfig) -> None:
         pt.init()
         ranking = create_lexical_ranking(q_enc.n_docs)
         q_enc.ranking = ranking
-        index = load_index(Path(config.ranker.query_encoder.index_path))
-        q_enc.index = index
 
     if config.ckpt_path is not None:
         model.load_state_dict(torch.load(config.ckpt_path)["state_dict"])
