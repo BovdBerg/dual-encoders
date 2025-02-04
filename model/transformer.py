@@ -11,7 +11,7 @@ EncodingModelBatch = Dict[str, torch.LongTensor]
 class TransformerTokenizer(Tokenizer):
     """Tokenizer for Transformer models."""
 
-    def __init__(self, pretrained_model: str, max_length: int = None) -> None:
+    def __init__(self, pretrained_model: str, max_length: int = None, add_special_tokens: bool = True) -> None:
         """Constuctor.
 
         Args:
@@ -21,6 +21,7 @@ class TransformerTokenizer(Tokenizer):
         super().__init__()
         self.tok = AutoTokenizer.from_pretrained(pretrained_model)
         self.max_length = max_length
+        self.add_special_tokens = add_special_tokens
 
     def __call__(self, batch: Sequence[str]) -> EncodingModelBatch:
         """Tokenize a batch of strings.
@@ -37,6 +38,7 @@ class TransformerTokenizer(Tokenizer):
             truncation=True,
             return_tensors="pt",
             max_length=self.max_length,
+            add_special_tokens=self.add_special_tokens,
         )
 
 

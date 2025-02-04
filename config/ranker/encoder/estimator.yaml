@@ -2,6 +2,7 @@ tokenizer:
   _target_: model.transformer.TransformerTokenizer
   pretrained_model: bert-base-uncased
   max_length: 512
+  add_special_tokens: True
 
 encoder:
   _target_: model.estimator.AvgEmbQueryEstimator
