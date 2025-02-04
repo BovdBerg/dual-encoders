@@ -133,7 +133,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         if self.q_only:
             return q_emb_1
 
-        # lookup embeddings of top-ranked documents in (in-memory) self.index
+        # find embeddings of top-ranked documents
         queries = self.tokenizer.batch_decode(input_ids, skip_special_tokens=True)
         d_embs = self._get_top_docs(queries)
 
