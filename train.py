@@ -29,9 +29,10 @@ def create_lexical_ranking(n_docs):
     chunk_size = 10_000
 
     train_topics = pt.get_dataset("irds:msmarco-passage/train").get_topics()
-    val_topics = pt.get_dataset("irds:msmarco-passage/eval").get_topics()
-    val_head = val_topics.sample(n=1000, random_state=42)  # Because my local data used 1k val samples first
-    all_topics = pd.concat([val_head, train_topics, val_topics])
+    eval_topics = pt.get_dataset("irds:msmarco-passage/eval").get_topics()
+    eval_head = eval_topics.sample(n=1000, random_state=42)  # Because my local data used 1k val samples first
+    dev_topics = pt.get_dataset("irds:msmarco-passage/dev").get_topics()
+    all_topics = pd.concat([eval_head, train_topics, eval_topics, dev_topics])
     queries_path = dataset_cache_path / f"{len(all_topics)}_topics.csv"
     all_topics.to_csv(queries_path, index=False)
 
