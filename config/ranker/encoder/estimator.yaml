@@ -8,7 +8,9 @@ encoder:
   _target_: model.estimator.AvgEmbQueryEstimator
   n_docs: 10
   tok_w_method: LEARNED
-  # q_only: True
-  # normalize_q_emb_1: True
+  docs_only: False
+  q_only: False
+  normalize_q_emb_1: False
+  normalize_q_emb_2: False
 
 index_path: /scratch/bovandenberg/indices/msm-psg/ff_index_msmpsg_TCTColBERT.h5
