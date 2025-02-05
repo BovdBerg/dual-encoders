@@ -76,9 +76,13 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         model = AutoModel.from_pretrained(self.pretrained_model, return_dict=True)
         self.tok_embs = model.get_input_embeddings()
 
-        self.tok_embs_avg_weights = torch.nn.Parameter(torch.ones(vocab_size) / vocab_size)
+        self.tok_embs_avg_weights = torch.nn.Parameter(
+            torch.ones(vocab_size) / vocab_size
+        )
 
-        self.embs_avg_weights = torch.nn.Parameter(torch.ones(self.n_embs) / self.n_embs)
+        self.embs_avg_weights = torch.nn.Parameter(
+            torch.ones(self.n_embs) / self.n_embs
+        )
 
     def _get_top_docs(self, queries: Sequence[str]):
         assert self.ranking is not None, "Provide a ranking before encoding."
@@ -87,18 +91,27 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
         # Retrieve the top-ranked documents for all queries
         top_docs = self.ranking._df[self.ranking._df["query"].isin(queries)].copy()
-        top_docs['rank'] = top_docs.groupby('query')['score'].rank(ascending=False, method='first').astype(int) - 1
-        top_docs['q_no'] = top_docs.groupby('query').ngroup()
+        top_docs["rank"] = (
+            top_docs.groupby("query")["score"]
+            .rank(ascending=False, method="first")
+            .astype(int)
+            - 1
+        )
+        top_docs["q_no"] = top_docs.groupby("query").ngroup()
 
         # Map queries and ranks to document IDs
-        top_docs_ids = torch.zeros((len(queries), self.n_docs), device=self.device, dtype=torch.long)
+        top_docs_ids = torch.zeros(
+            (len(queries), self.n_docs), device=self.device, dtype=torch.long
+        )
         query_indices = torch.tensor(top_docs["q_no"].values, device=self.device)
         rank_indices = torch.tensor(top_docs["rank"].values, device=self.device)
         doc_ids = torch.tensor(top_docs["id"].astype(int).values, device=self.device)
         top_docs_ids[query_indices, rank_indices] = doc_ids
 
         # Replace any 0 in top_docs_ids with d_id at rank 0 for that query
-        top_docs_ids[top_docs_ids == 0] = top_docs_ids[:, 0].unsqueeze(1).expand_as(top_docs_ids)[top_docs_ids == 0]
+        top_docs_ids[top_docs_ids == 0] = (
+            top_docs_ids[:, 0].unsqueeze(1).expand_as(top_docs_ids)[top_docs_ids == 0]
+        )
         print(f"top_docs_ids: {top_docs_ids}")
 
         # d_tokens: Lookup tokens in self.d_tokens_index for d_ids in top_docs_ids
@@ -148,9 +161,13 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         embs_weights = torch.zeros((self.n_embs), device=self.device)
         if self.docs_only:
             embs_weights[0] = 0.0
-            embs_weights[1:self.n_embs] = torch.nn.functional.softmax(self.embs_avg_weights[1:self.n_embs], 0)
+            embs_weights[1 : self.n_embs] = torch.nn.functional.softmax(
+                self.embs_avg_weights[1 : self.n_embs], 0
+            )
         else:
-            embs_weights[:self.n_embs] = torch.nn.functional.softmax(self.embs_avg_weights[:self.n_embs], 0)
+            embs_weights[: self.n_embs] = torch.nn.functional.softmax(
+                self.embs_avg_weights[: self.n_embs], 0
+            )
         embs_weights = embs_weights.unsqueeze(0).expand(batch_size, -1)
 
         q_emb_2 = torch.sum(embs * embs_weights.unsqueeze(-1), -2)
