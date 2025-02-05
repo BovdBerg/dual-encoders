@@ -2,11 +2,12 @@ from enum import Enum
 from typing import Dict, Optional, Sequence
 
 import numpy as np
+import pandas as pd
+import pyterrier as pt
 import torch
 from fast_forward.index import Index
 from fast_forward.ranking import Ranking
 from transformers import AutoModel, AutoTokenizer
-import pyterrier as pt
 
 EncodingModelBatch = Dict[str, torch.LongTensor]
 
@@ -89,7 +90,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
             torch.ones(self.n_embs)
         )
 
-    def _get_top_docs_embs(self, queries: Sequence[str]):
+    def _get_top_docs_embs(self, queries: pd.DataFrame):
         assert self.doc_encoder is not None, "Provide a doc_encoder before encoding."
 
         # Retrieve top-ranked documents for all queries in batch
@@ -141,6 +142,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
         # find embeddings of top-ranked documents
         queries = self.tokenizer.batch_decode(input_ids, skip_special_tokens=True)
+        queries = pd.DataFrame({"query": queries, "qid": np.arange(batch_size)})
         d_embs = self._get_top_docs_embs(queries)
 
         # estimate query embedding as weighted average of q_emb and d_embs
