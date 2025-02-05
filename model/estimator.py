@@ -86,9 +86,6 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
         # Retrieve the top-ranked documents for all queries
         top_docs = self.ranking._df[self.ranking._df["query"].isin(queries)]
-        print(f"uniq q 1: {top_docs['query'].unique()}")
-        top_docs = top_docs.set_index("query").loc[queries].reset_index()
-        print(f"uniq q 2: {top_docs['query'].unique()}")
         print(f"top_docs:\n{top_docs}")
         top_docs_ids = torch.tensor(top_docs["id"].unique().astype(np.int64), dtype=torch.long)
         if len(top_docs_ids) < self.n_docs:
