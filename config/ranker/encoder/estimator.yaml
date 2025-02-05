@@ -9,8 +9,8 @@ encoder:
   pretrained_model: ${..pretrained_model}
   n_docs: 10
   tok_w_method: LEARNED
-  docs_only: False
   q_only: False
+  docs_only: False
   normalize_q_emb_1: False
   normalize_q_emb_2: False
 

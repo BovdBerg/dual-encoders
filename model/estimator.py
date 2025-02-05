@@ -44,8 +44,8 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         n_docs: int,
         pretrained_model: str = "bert-base-uncased",
         tok_w_method: str = "LEARNED",
-        docs_only: bool = False,
         q_only: bool = False,
+        docs_only: bool = False,
         normalize_q_emb_1: bool = False,
         normalize_q_emb_2: bool = False,
     ) -> None:
@@ -54,8 +54,8 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         Args:
             n_docs (int): The number of top-ranked documents to average.
             tok_w_method (TOKEN_WEIGHT_METHOD): The method to use for token weighting.
-            docs_only (bool): Whether to disable the lightweight query estimation and only use the top-ranked documents.
             q_only (bool): Whether to only use the lightweight query estimation and not the top-ranked documents.
+            docs_only (bool): Whether to disable the lightweight query estimation and only use the top-ranked documents.
             normalize_q_emb_1 (bool): Whether to normalize the lightweight query estimation.
             normalize_q_emb_2 (bool): Whether to normalize the final query embedding.
         """
