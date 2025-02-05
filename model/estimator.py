@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Dict, Optional, Sequence
 
+import numpy as np
 import torch
 from fast_forward.index import Index
 from fast_forward.ranking import Ranking
@@ -65,6 +66,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         self.normalize_q_emb_2 = normalize_q_emb_2
         self.pretrained_model = "bert-base-uncased"
         self.doc_encoder = None
+        self.d_text_index = None
         self._ranking = None
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -82,27 +84,25 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         assert self.ranking is not None, "Provide a ranking before encoding."
         assert self.doc_encoder is not None, "Provide a doc_encoder before encoding."
 
-        # Create tensors for padding and total embedding counts
-        d_embs = torch.zeros((len(queries), self.n_docs, 768)).to(self.device)
-
         # Retrieve the top-ranked documents for all queries
         top_docs = self.ranking._df[self.ranking._df["query"].isin(queries)]
-        query_to_idx = {query: idx for idx, query in enumerate(queries)}
+        print(f"uniq q 1: {top_docs['query'].unique()}")
+        top_docs = top_docs.set_index("query").loc[queries].reset_index()
+        print(f"uniq q 2: {top_docs['query'].unique()}")
+        print(f"top_docs:\n{top_docs}")
+        top_docs_ids = torch.tensor(top_docs["id"].unique().astype(np.int64), dtype=torch.long)
+        if len(top_docs_ids) < self.n_docs:
+            # Repeat top_docs_ids until reaching length n_docs
+            top_docs_ids = torch.cat([top_docs_ids] * self.n_docs, dim=0)[: self.n_docs]
+        print(f"top_docs_ids:\n{top_docs_ids}")
 
-        for query, group in top_docs.groupby("query"):
-            # TODO: Get the embeddings for the top-ranked documents from doc_encoder
-            top_embs, d_idxs = self.index._get_vectors(group["id"].unique())
-            if self.index.quantizer is not None:
-                top_embs = self.index.quantizer.decode(top_embs)
-            top_embs = torch.tensor(top_embs[[x[0] for x in d_idxs]])
+        # self.d_text_index is a pt.IndexFactory.of(index_ref) mapping doc_ids to doc_texts
+        d_texts = self.d_text_index(top_docs_ids)
+        print(f"d_texts: {d_texts}")
 
-            # Repeat d_embs until reaching length n_docs
-            if len(top_embs) < self.n_docs:
-                top_embs = torch.cat([top_embs] * self.n_docs, dim=0)[: self.n_docs]
-
-            # Pad and count embeddings for this query
-            query_idx = query_to_idx[str(query)]
-            d_embs[query_idx] = top_embs
+        # TODO: probably requires a EncodingModelBatch, which is tokenized.
+        d_embs = self.doc_encoder(d_texts)
+        print(f"d_embs: {d_embs}")
 
         return d_embs
 

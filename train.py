@@ -80,6 +80,14 @@ def create_lexical_ranking(n_docs):
     return ranking
 
 
+def create_index():
+    dataset = pt.get_dataset("irds:msmarco-passage")
+    indexer = pt.IterDictIndexer("./msmpsg-texts-index")
+    index_ref = indexer.index(dataset.get_corpus_iter(), fields=["text"])
+    d_texts_index = pt.IndexFactory.of(index_ref)
+    return d_texts_index
+
+
 @hydra.main(config_path="config", config_name="training", version_base="1.3")
 def main(config: DictConfig) -> None:
     seed_everything(config.random_seed, workers=True)
@@ -93,8 +101,8 @@ def main(config: DictConfig) -> None:
     q_enc = model.query_encoder
     if isinstance(q_enc, AvgEmbQueryEstimator):
         pt.init()
-        ranking = create_lexical_ranking(q_enc.n_docs)
-        q_enc.ranking = ranking
+        q_enc.d_text_index = create_index()
+        q_enc.ranking = create_lexical_ranking(q_enc.n_docs)
 
     if config.ckpt_path is not None:
         model.load_state_dict(torch.load(config.ckpt_path)["state_dict"])
