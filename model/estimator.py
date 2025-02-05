@@ -6,6 +6,7 @@ import torch
 from fast_forward.index import Index
 from fast_forward.ranking import Ranking
 from transformers import AutoModel, AutoTokenizer
+import pyterrier as pt
 
 EncodingModelBatch = Dict[str, torch.LongTensor]
 
@@ -40,6 +41,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
     def __init__(
         self,
         n_docs: int,
+        pretrained_model: str = "bert-base-uncased",
         tok_w_method: str = "LEARNED",
         docs_only: bool = False,
         q_only: bool = False,
@@ -57,76 +59,56 @@ class AvgEmbQueryEstimator(torch.nn.Module):
             normalize_q_emb_2 (bool): Whether to normalize the final query embedding.
         """
         super().__init__()
+        pt.init()
         self.n_docs = n_docs
         self.n_embs = n_docs + 1
+        self.pretrained_model = pretrained_model
         self.tok_w_method = WEIGHT_METHOD(tok_w_method)
         self.docs_only = docs_only
         self.q_only = q_only
         self.normalize_q_emb_1 = normalize_q_emb_1
         self.normalize_q_emb_2 = normalize_q_emb_2
-        self.pretrained_model = "bert-base-uncased"
-        self._ranking = None
-        self.d_text_index = None
-        self.doc_encoder = None
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.tokenizer = AutoTokenizer.from_pretrained(self.pretrained_model)
-        vocab_size = self.tokenizer.vocab_size
+        self.doc_encoder = None
+        self.sparse_index = pt.BatchRetrieve.from_dataset(
+            "msmarco_passage",
+            "terrier_stemmed_text",
+            wmodel="BM25",
+            metadata=["text"],  # Add doc text to the output
+            num_results=self.n_docs,  # Only return n_docs top-ranked documents
+        )
 
         model = AutoModel.from_pretrained(self.pretrained_model, return_dict=True)
         self.tok_embs = model.get_input_embeddings()
-
         self.tok_embs_avg_weights = torch.nn.Parameter(
-            torch.ones(vocab_size) / vocab_size
+            torch.ones(self.tokenizer.vocab_size)
         )
-
         self.embs_avg_weights = torch.nn.Parameter(
-            torch.ones(self.n_embs) / self.n_embs
+            torch.ones(self.n_embs)
         )
 
-    def _get_top_docs(self, queries: Sequence[str]):
-        assert self.ranking is not None, "Provide a ranking before encoding."
-        assert self.d_text_index is not None, "Provide a document text index before encoding."
+    def _get_top_docs_embs(self, queries: Sequence[str]):
         assert self.doc_encoder is not None, "Provide a doc_encoder before encoding."
 
-        # Retrieve the top-ranked documents for all queries
-        top_docs = self.ranking._df[self.ranking._df["query"].isin(queries)].copy()
-        top_docs["rank"] = (
-            top_docs
-            .groupby("query")["score"]
-            .rank(ascending=False, method="first")
-            .astype(int)
-            - 1
-        )
-        top_docs["q_no"] = top_docs.groupby("query").ngroup()
+        # Retrieve top-ranked documents for all queries in batch
+        top_docs = self.sparse_index.transform(queries)
 
-        # Map queries and ranks to document IDs
-        top_docs_ids = torch.zeros(
-            (len(queries), self.n_docs), device=self.device, dtype=torch.long
-        )
-        query_indices = torch.tensor(top_docs["q_no"].values, device=self.device)
-        rank_indices = torch.tensor(top_docs["rank"].values, device=self.device)
-        doc_ids = torch.tensor(top_docs["id"].astype(int).values, device=self.device)
-        top_docs_ids[query_indices, rank_indices] = doc_ids
+        # Tokenize top_docs texts
+        # TODO: use TransformerTokenizer (from estimator.yaml) directly
+        d_toks = self.tokenizer(
+            top_docs["text"].tolist(),
+            padding=True,
+            return_tensors="pt",
+            truncation=True,
+            max_length=512,
+            add_special_tokens=True,  # TODO: might make sense to disable special tokens, e.g. [CLS] will learn a generic embedding
+        ).to(self.device)
 
-        # Replace any 0 in top_docs_ids with d_id at rank 0 for that query
-        top_docs_ids[top_docs_ids == 0] = (
-            top_docs_ids[:, 0].unsqueeze(1).expand_as(top_docs_ids)[top_docs_ids == 0]
-        )
-        print(f"top_docs_ids: {top_docs_ids}")
-
-        # d_tokens: Lookup tokens in self.d_text_index for d_ids in top_docs_ids
-        print(f"self.d_index: {self.d_text_index}")
-        d_texts = self.d_text_index(top_docs_ids)["text"]
-        print(f"d_texts: {d_texts}")
-
-        d_tokens = self.tokenizer(d_texts, return_tensors="pt", padding=True)
-        print(f"d_tokens: {d_tokens}")
-
-        # d_embs: Map d_tokens from tokens to embeddings
-        # TODO: should I use dual_encoder.encode_documents() instead?
-        d_embs = self.doc_encoder(d_tokens)
-        print(f"d_embs: {d_embs}")
+        # Encode top_docs_toks with doc_encoder and reshape
+        d_embs = self.doc_encoder(d_toks)
+        d_embs = d_embs.view(len(queries), self.n_docs, -1)
 
         return d_embs
 
@@ -140,16 +122,16 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         else:
             # estimate lightweight query as weighted average of q_tok_embs
             q_tok_embs = self.tok_embs(input_ids)
-            q_tok_embs_masked = q_tok_embs * attention_mask.unsqueeze(-1)
+            # TODO: does the masking even do anything? q_tok_embs is already 0 where attention_mask is 0 right?
             match self.tok_w_method:
                 case WEIGHT_METHOD.UNIFORM:
-                    q_emb_1 = torch.mean(q_tok_embs_masked, 1)
+                    q_emb_1 = torch.mean(q_tok_embs, 1)
                 case WEIGHT_METHOD.LEARNED:
                     q_tok_weights = torch.nn.functional.softmax(
                         self.tok_embs_avg_weights[input_ids], -1
                     )
                     q_emb_1 = torch.sum(
-                        q_tok_embs_masked * q_tok_weights.unsqueeze(-1), 1
+                        q_tok_embs * q_tok_weights.unsqueeze(-1), 1
                     )
             if self.normalize_q_emb_1:
                 q_emb_1 = torch.nn.functional.normalize(q_emb_1)
@@ -159,7 +141,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
         # find embeddings of top-ranked documents
         queries = self.tokenizer.batch_decode(input_ids, skip_special_tokens=True)
-        d_embs = self._get_top_docs(queries)
+        d_embs = self._get_top_docs_embs(queries)
 
         # estimate query embedding as weighted average of q_emb and d_embs
         embs = torch.cat((q_emb_1.unsqueeze(1), d_embs), -2).to(self.device)
@@ -180,14 +162,6 @@ class AvgEmbQueryEstimator(torch.nn.Module):
             q_emb_2 = torch.nn.functional.normalize(q_emb_2)
 
         return q_emb_2
-
-    @property
-    def ranking(self) -> Optional[Ranking]:
-        return self._ranking
-
-    @ranking.setter
-    def ranking(self, ranking: Ranking):
-        self._ranking = ranking.cut(self.n_docs)
 
     @property
     def embedding_dimension(self) -> int:

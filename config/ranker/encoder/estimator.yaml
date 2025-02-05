@@ -1,14 +1,17 @@
 tokenizer:
   _target_: model.transformer.TransformerTokenizer
-  pretrained_model: bert-base-uncased
+  pretrained_model: ${..pretrained_model}
   max_length: 512
   add_special_tokens: True
 
 encoder:
   _target_: model.estimator.AvgEmbQueryEstimator
+  pretrained_model: ${..pretrained_model}
   n_docs: 10
   tok_w_method: LEARNED
   docs_only: False
   q_only: False
   normalize_q_emb_1: False
   normalize_q_emb_2: False
+
+pretrained_model: bert-base-uncased
