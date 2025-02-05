@@ -59,8 +59,11 @@ class AvgEmbQueryEstimator(torch.nn.Module):
             normalize_q_emb_1 (bool): Whether to normalize the lightweight query estimation.
             normalize_q_emb_2 (bool): Whether to normalize the final query embedding.
         """
+        assert not (q_only and docs_only), "Cannot use both q_only and docs_only."
+
         super().__init__()
         pt.init()
+
         self.n_docs = n_docs
         self.n_embs = n_docs + 1
         self.pretrained_model = pretrained_model
