@@ -66,7 +66,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         self.normalize_q_emb_2 = normalize_q_emb_2
         self.pretrained_model = "bert-base-uncased"
         self._ranking = None
-        self.d_tokens_index = None
+        self.d_text_index = None
         self.doc_encoder = None
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -86,7 +86,9 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
     def _get_top_docs(self, queries: Sequence[str]):
         assert self.ranking is not None, "Provide a ranking before encoding."
-        assert self.d_tokens_index is not None, "Provide a d_tokens_index before encoding."
+        assert (
+            self.d_text_index is not None
+        ), "Provide a document text index before encoding."
         assert self.doc_encoder is not None, "Provide a doc_encoder before encoding."
 
         # Retrieve the top-ranked documents for all queries
@@ -114,8 +116,12 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         )
         print(f"top_docs_ids: {top_docs_ids}")
 
-        # d_tokens: Lookup tokens in self.d_tokens_index for d_ids in top_docs_ids
-        d_tokens = self.d_tokens_index.get_batch(top_docs_ids)
+        # d_tokens: Lookup tokens in self.d_text_index for d_ids in top_docs_ids
+        print(f"self.d_index: {self.d_text_index}")
+        d_texts = self.d_text_index(top_docs_ids)["text"]
+        print(f"d_texts: {d_texts}")
+
+        d_tokens = self.tokenizer(d_texts, return_tensors="pt", padding=True)
         print(f"d_tokens: {d_tokens}")
 
         # d_embs: Map d_tokens from tokens to embeddings

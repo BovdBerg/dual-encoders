@@ -29,7 +29,9 @@ def create_lexical_ranking(n_docs):
 
     train_topics = pt.get_dataset("irds:msmarco-passage/train").get_topics()
     eval_topics = pt.get_dataset("irds:msmarco-passage/eval").get_topics()
-    eval_head = eval_topics.sample(n=1000, random_state=42)  # Because my local data used 1k val samples first
+    eval_head = eval_topics.sample(
+        n=1000, random_state=42
+    )  # Because my local data used 1k val samples first
     dev_topics = pt.get_dataset("irds:msmarco-passage/dev").get_topics()
     all_topics = pd.concat([eval_head, train_topics, eval_topics, dev_topics])
     queries_path = dataset_cache_path / f"{len(all_topics)}_topics.csv"
@@ -80,32 +82,6 @@ def create_lexical_ranking(n_docs):
     return ranking
 
 
-def create_index(tokenizer):
-    index_path = "/scratch/bovandenberg/indices/msm-psg/d_tokens_index_msmpsg"
-
-    if os.path.exists(index_path):
-        print(f"Loading index from {index_path}")
-        d_tokens_index = pt.IndexFactory.of(index_path)
-    else:
-        print(f"Creating new index at {index_path}")
-        dataset = pt.get_dataset("irds:msmarco-passage")
-        indexer = pt.IterDictIndexer(index_path)
-        index_ref = indexer.index(
-            [
-                {
-                    "docno": doc["docno"],
-                    "d_tokens": tokenizer(str(doc["text"]))
-                }
-                for doc in dataset.get_corpus_iter()
-            ],
-            fields=["docno", "d_tokens"]
-        )
-        d_tokens_index = pt.IndexFactory.of(index_ref)
-    print("Index is now available")
-    
-    return d_tokens_index
-
-
 @hydra.main(config_path="config", config_name="training", version_base="1.3")
 def main(config: DictConfig) -> None:
     seed_everything(config.random_seed, workers=True)
@@ -120,7 +96,12 @@ def main(config: DictConfig) -> None:
     q_enc = model.query_encoder
     if isinstance(q_enc, AvgEmbQueryEstimator):
         pt.init()
-        q_enc.d_tokens_index = create_index(data_processor.doc_tokenizer)
+        q_enc.d_text_index = pt.BatchRetrieve.from_dataset(
+            "msmarco_passage",
+            "terrier_stemmed_text",
+            wmodel="BM25",
+            metadata=["docno", "text"],
+        )
         q_enc.ranking = create_lexical_ranking(q_enc.n_docs)
 
     if config.ckpt_path is not None:
