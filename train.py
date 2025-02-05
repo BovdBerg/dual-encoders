@@ -82,7 +82,7 @@ def create_lexical_ranking(n_docs):
 
 def create_index():
     dataset = pt.get_dataset("irds:msmarco-passage")
-    indexer = pt.IterDictIndexer("./msmpsg-texts-index")
+    indexer = pt.IterDictIndexer("/scratch/bovandenberg/indices/msm-psg/texts_index_msmpsg")
     index_ref = indexer.index(dataset.get_corpus_iter(), fields=["text"])
     d_texts_index = pt.IndexFactory.of(index_ref)
     return d_texts_index
