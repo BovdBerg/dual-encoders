@@ -81,7 +81,7 @@ def create_lexical_ranking(n_docs):
 
 
 def create_index(tokenizer):
-    index_path = "/home/bvdb9/indices/msm-psg/d_tokens2_index_msmpsg"
+    index_path = "/scratch/bovandenberg/indices/msm-psg/d_tokens_index_msmpsg"
 
     if os.path.exists(index_path):
         print(f"Loading index from {index_path}")
