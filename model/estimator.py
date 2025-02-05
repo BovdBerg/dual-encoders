@@ -86,15 +86,14 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
     def _get_top_docs(self, queries: Sequence[str]):
         assert self.ranking is not None, "Provide a ranking before encoding."
-        assert (
-            self.d_text_index is not None
-        ), "Provide a document text index before encoding."
+        assert self.d_text_index is not None, "Provide a document text index before encoding."
         assert self.doc_encoder is not None, "Provide a doc_encoder before encoding."
 
         # Retrieve the top-ranked documents for all queries
         top_docs = self.ranking._df[self.ranking._df["query"].isin(queries)].copy()
         top_docs["rank"] = (
-            top_docs.groupby("query")["score"]
+            top_docs
+            .groupby("query")["score"]
             .rank(ascending=False, method="first")
             .astype(int)
             - 1
