@@ -35,7 +35,6 @@ def create_lexical_ranking(n_docs):
     queries_path = dataset_cache_path / f"{len(all_topics)}_topics.csv"
     all_topics.to_csv(queries_path, index=False)
 
-    ranking = None
     queries = pd.read_csv(queries_path)
     res_df = pd.DataFrame()
     for i, chunk in enumerate(
@@ -75,7 +74,10 @@ def create_lexical_ranking(n_docs):
         chunk_ranking = chunk_ranking.cut(n_docs)
         res_df = pd.concat([res_df, chunk_ranking._df])
 
-    return Ranking(res_df).cut(n_docs)
+    ranking = Ranking(res_df)
+    print(f"Created ranking with {len(ranking._df)} rows")
+
+    return ranking
 
 
 @hydra.main(config_path="config", config_name="training", version_base="1.3")
