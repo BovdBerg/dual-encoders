@@ -65,9 +65,9 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         self.normalize_q_emb_1 = normalize_q_emb_1
         self.normalize_q_emb_2 = normalize_q_emb_2
         self.pretrained_model = "bert-base-uncased"
-        self.doc_encoder = None
-        self.d_text_index = None
         self._ranking = None
+        self.d_tokens_index = None
+        self.doc_encoder = None
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.pretrained_model)
@@ -82,23 +82,32 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
     def _get_top_docs(self, queries: Sequence[str]):
         assert self.ranking is not None, "Provide a ranking before encoding."
+        assert self.d_tokens_index is not None, "Provide a d_tokens_index before encoding."
         assert self.doc_encoder is not None, "Provide a doc_encoder before encoding."
 
         # Retrieve the top-ranked documents for all queries
-        top_docs = self.ranking._df[self.ranking._df["query"].isin(queries)]
-        print(f"top_docs:\n{top_docs}")
-        top_docs_ids = torch.tensor(top_docs["id"].unique().astype(np.int64), dtype=torch.long)
-        if len(top_docs_ids) < self.n_docs:
-            # Repeat top_docs_ids until reaching length n_docs
-            top_docs_ids = torch.cat([top_docs_ids] * self.n_docs, dim=0)[: self.n_docs]
-        print(f"top_docs_ids:\n{top_docs_ids}")
+        top_docs = self.ranking._df[self.ranking._df["query"].isin(queries)].copy()
+        top_docs['rank'] = top_docs.groupby('query')['score'].rank(ascending=False, method='first').astype(int) - 1
+        top_docs['q_no'] = top_docs.groupby('query').ngroup()
 
-        # self.d_text_index is a pt.IndexFactory.of(index_ref) mapping doc_ids to doc_texts
-        d_texts = self.d_text_index(top_docs_ids)
-        print(f"d_texts: {d_texts}")
+        # Map queries and ranks to document IDs
+        top_docs_ids = torch.zeros((len(queries), self.n_docs), device=self.device, dtype=torch.long)
+        query_indices = torch.tensor(top_docs["q_no"].values, device=self.device)
+        rank_indices = torch.tensor(top_docs["rank"].values, device=self.device)
+        doc_ids = torch.tensor(top_docs["id"].astype(int).values, device=self.device)
+        top_docs_ids[query_indices, rank_indices] = doc_ids
 
-        # TODO: probably requires a EncodingModelBatch, which is tokenized.
-        d_embs = self.doc_encoder(d_texts)
+        # Replace any 0 in top_docs_ids with d_id at rank 0 for that query
+        top_docs_ids[top_docs_ids == 0] = top_docs_ids[:, 0].unsqueeze(1).expand_as(top_docs_ids)[top_docs_ids == 0]
+        print(f"top_docs_ids: {top_docs_ids}")
+
+        # d_tokens: Lookup tokens in self.d_tokens_index for d_ids in top_docs_ids
+        d_tokens = self.d_tokens_index.get_batch(top_docs_ids)
+        print(f"d_tokens: {d_tokens}")
+
+        # d_embs: Map d_tokens from tokens to embeddings
+        # TODO: should I use dual_encoder.encode_documents() instead?
+        d_embs = self.doc_encoder(d_tokens)
         print(f"d_embs: {d_embs}")
 
         return d_embs

@@ -80,20 +80,39 @@ def create_lexical_ranking(n_docs):
     return ranking
 
 
-def create_index():
-    dataset = pt.get_dataset("irds:msmarco-passage")
-    indexer = pt.IterDictIndexer("/scratch/bovandenberg/indices/msm-psg/texts_index_msmpsg")
-    index_ref = indexer.index(dataset.get_corpus_iter(), fields=["text"])
-    d_texts_index = pt.IndexFactory.of(index_ref)
-    return d_texts_index
+def create_index(tokenizer):
+    index_path = "/home/bvdb9/indices/msm-psg/d_tokens2_index_msmpsg"
+
+    if os.path.exists(index_path):
+        print(f"Loading index from {index_path}")
+        d_tokens_index = pt.IndexFactory.of(index_path)
+    else:
+        print(f"Creating new index at {index_path}")
+        dataset = pt.get_dataset("irds:msmarco-passage")
+        indexer = pt.IterDictIndexer(index_path)
+        index_ref = indexer.index(
+            [
+                {
+                    "docno": doc["docno"],
+                    "d_tokens": tokenizer(str(doc["text"]))
+                }
+                for doc in dataset.get_corpus_iter()
+            ],
+            fields=["docno", "d_tokens"]
+        )
+        d_tokens_index = pt.IndexFactory.of(index_ref)
+    print("Index is now available")
+    
+    return d_tokens_index
 
 
 @hydra.main(config_path="config", config_name="training", version_base="1.3")
 def main(config: DictConfig) -> None:
     seed_everything(config.random_seed, workers=True)
+    data_processor = instantiate(config.ranker.data_processor)
     data_module = instantiate(
         config.training_data,
-        data_processor=instantiate(config.ranker.data_processor),
+        data_processor=data_processor,
     )
     trainer = instantiate(config.trainer)
     model = instantiate(config.ranker.model)
@@ -101,7 +120,7 @@ def main(config: DictConfig) -> None:
     q_enc = model.query_encoder
     if isinstance(q_enc, AvgEmbQueryEstimator):
         pt.init()
-        q_enc.d_text_index = create_index()
+        q_enc.d_tokens_index = create_index(data_processor.doc_tokenizer)
         q_enc.ranking = create_lexical_ranking(q_enc.n_docs)
 
     if config.ckpt_path is not None:
