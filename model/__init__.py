@@ -271,6 +271,10 @@ class DualEncoder(Ranker):
         # the diagonal holds all positive scores due to the way the docs are concatenated
         loss = torch.mean(-torch.log(torch.diagonal(scores) / torch.sum(scores)))
         self.log("train_loss", loss)
+
+        # Clear CUDA cache
+        torch.cuda.empty_cache()
+
         return loss
 
     def validation_step(self, batch: ValTestBatch, batch_idx: int) -> None:
