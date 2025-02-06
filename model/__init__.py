@@ -7,7 +7,6 @@ from ranking_utils.model.data import DataProcessor
 from transformers import get_constant_schedule_with_warmup
 
 from model.metrics import KLDivergence, TensorStack
-from model.estimator import AvgEmbQueryEstimator
 
 EncodingModelInput = str
 EncodingModelBatch = Any
@@ -158,8 +157,6 @@ class DualEncoder(Ranker):
             self.query_encoder.embedding_dimension
             == self.doc_encoder.embedding_dimension
         )
-        if isinstance(self.query_encoder, AvgEmbQueryEstimator):
-            self.query_encoder.doc_encoder = self.doc_encoder
 
         self.projection = (
             torch.nn.Linear(

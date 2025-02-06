@@ -77,6 +77,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.tokenizer = AutoTokenizer.from_pretrained(self.pretrained_model)
+        self.doc_tokenizer = None
         self.doc_encoder = None
         self.sparse_index = pt.BatchRetrieve.from_dataset(
             "msmarco_passage",
@@ -97,6 +98,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         self.to(self.device)
 
     def _get_top_docs_embs(self, queries: pd.DataFrame):
+        assert self.doc_tokenizer is not None, "Provide a doc_tokenizer before encoding."
         assert self.doc_encoder is not None, "Provide a doc_encoder before encoding."
 
         # Retrieve top-ranked documents for all queries in batch
@@ -108,15 +110,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
             return torch.zeros((len(queries), self.n_docs, 768), device=self.device)
 
         # Tokenize top_docs texts
-        # TODO: use TransformerTokenizer (from estimator.yaml) directly
-        d_toks = self.tokenizer(
-            top_docs["text"].tolist(),
-            padding=True,
-            return_tensors="pt",
-            truncation=True,
-            max_length=512,
-            add_special_tokens=True,  # TODO: might make sense to disable special tokens, e.g. [CLS] will learn a generic embedding
-        ).to(self.device)
+        d_toks = self.doc_tokenizer(top_docs["text"].tolist()).to(self.device)
 
         # Encode d_embs with doc_encoder
         d_embs = torch.zeros((len(queries), self.n_docs, 768), device=self.device)
