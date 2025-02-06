@@ -99,7 +99,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         assert self.doc_encoder is not None, "Provide a doc_encoder before encoding."
 
         # Retrieve top-ranked documents for all queries in batch
-        top_docs = self.sparse_index.transform(queries)
+        top_docs: pd.DataFrame = self.sparse_index.transform(queries)
         
         # Print the amount of documents retrieved for each query
         print(top_docs["qid"].value_counts())
@@ -116,7 +116,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         ).to(self.device)
 
         # Encode top_docs_toks with doc_encoder and reshape
-        d_enc_embs = self.doc_encoder(d_toks).last_hidden_state[:, 0, :]
+        d_enc_embs: torch.Tensor = self.doc_encoder(d_toks)
         print(f"Shape of d_enc_embs: {d_enc_embs.shape}")
 
         # Initialize d_embs with zeros
