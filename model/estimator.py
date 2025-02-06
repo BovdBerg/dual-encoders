@@ -87,11 +87,12 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         model = AutoModel.from_pretrained(self.pretrained_model, return_dict=True)
         self.tok_embs = model.get_input_embeddings()
         self.tok_embs_avg_weights = torch.nn.Parameter(
-            torch.ones(self.tokenizer.vocab_size)
+            torch.ones(self.tokenizer.vocab_size, device=self.device)
         )
         self.embs_avg_weights = torch.nn.Parameter(
-            torch.ones(self.n_embs)
+            torch.ones(self.n_embs, device=self.device)
         )
+        self.to(self.device)
 
     def _get_top_docs_embs(self, queries: pd.DataFrame):
         assert self.doc_encoder is not None, "Provide a doc_encoder before encoding."
@@ -121,7 +122,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         attention_mask = q_tokens["attention_mask"]
 
         if self.docs_only:
-            q_emb_1 = torch.zeros((len(input_ids), 768))
+            q_emb_1 = torch.zeros((len(input_ids), 768), device=self.device)
         else:
             # estimate lightweight query as weighted average of q_tok_embs
             q_tok_embs = self.tok_embs(input_ids)
