@@ -186,6 +186,11 @@ class AvgEmbQueryEstimator(torch.nn.Module):
             )
         embs_weights = embs_weights.unsqueeze(0).expand(len(queries), -1)
 
+        # Apply mask to ignore zeros in the final averaging
+        mask = (embs != 0).float()
+        weighted_embs = embs * embs_weights.unsqueeze(-1) * mask
+        final_embs = weighted_embs.sum(dim=-2) / mask.sum(dim=-2)
+
         q_emb_2 = torch.sum(embs * embs_weights.unsqueeze(-1), -2)
         if self.normalize_q_emb_2:
             q_emb_2 = torch.nn.functional.normalize(q_emb_2)
