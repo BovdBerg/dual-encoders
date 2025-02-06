@@ -5,7 +5,7 @@ limit_val_batches: 1000
 val_check_interval: 0.25
 max_epochs: 50
 precision: 16-mixed
-accumulate_grad_batches: 32
+accumulate_grad_batches: 8
 callbacks:
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor
   - _target_: pytorch_lightning.callbacks.EarlyStopping
