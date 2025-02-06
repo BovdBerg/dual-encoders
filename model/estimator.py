@@ -2,6 +2,7 @@ import re
 from enum import Enum
 from typing import Dict, Optional, Sequence
 
+import logging
 import numpy as np
 import pandas as pd
 import pyterrier as pt
@@ -99,7 +100,12 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         assert self.doc_encoder is not None, "Provide a doc_encoder before encoding."
 
         # Retrieve top-ranked documents for all queries in batch
-        top_docs: pd.DataFrame = self.sparse_index.transform(queries)
+        try:
+            # Retrieve top-ranked documents for all queries in batch
+            top_docs: pd.DataFrame = self.sparse_index.transform(queries)
+        except Exception as e:
+            logging.warning(f"Error getting top_docs (add case to validate_query): {e}")
+            return torch.zeros((len(queries), self.n_docs, 768), device=self.device)
 
         # Tokenize top_docs texts
         # TODO: use TransformerTokenizer (from estimator.yaml) directly
@@ -154,7 +160,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
             if not query or query.strip() == "":
                 return False
             # Check for special characters that might cause parsing issues
-            if re.search(r'[;"\'/?&|!(){}\[\]^~*\\<>]', query):
+            if re.search(r'[;"\'/?&|!(){}\[\]^~*\\<>:]', query):
                 return False
             # Check for minimum length
             if len(query.strip()) < 5:
