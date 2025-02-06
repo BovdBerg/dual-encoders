@@ -116,9 +116,24 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         ).to(self.device)
 
         # Encode top_docs_toks with doc_encoder and reshape
-        d_embs = self.doc_encoder(d_toks)
+        d_enc_embs = self.doc_encoder(d_toks)
+        print(f"Shape of d_enc_embs: {d_enc_embs.shape}")
+
+        d_embs = torch.zeros((len(queries), self.n_docs, 768), device=self.device)
+        q_groups = top_docs.groupby("query")
+        q_nos = torch.tensor(q_groups.ngroup(), device=self.device)
+        ranks = torch.tensor(
+            q_groups["score"].rank(ascending=False, method="first").astype(int) - 1,
+            device=self.device,
+        )
+        d_embs[q_nos, ranks] = d_enc_embs
         print(f"Shape of d_embs: {d_embs.shape}")
-        d_embs = d_embs.view(len(queries), self.n_docs, -1)
+
+        # replace zeros in d_embs with emb at rank 0 (if n_top_docs was < self.n_docs for any queries)
+        d_embs[d_embs == 0] = (
+            d_embs[:, 0].unsqueeze(1).expand_as(d_embs)[d_embs == 0]
+        )
+        print(f"Shape of d_embs: {d_embs.shape}")
 
         return d_embs
 
