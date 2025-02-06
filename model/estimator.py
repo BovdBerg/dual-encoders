@@ -139,10 +139,12 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         else:
             # estimate lightweight query as weighted average of q_tok_embs
             q_tok_embs = self.tok_embs(input_ids)
-            # TODO: does the masking even do anything? q_tok_embs is already 0 where attention_mask is 0 right?
+            masked_emb = q_tok_embs * attention_mask.unsqueeze(-1)  # Mask padding tokens
+
             match self.tok_w_method:
                 case WEIGHT_METHOD.UNIFORM:
-                    q_emb_1 = torch.mean(q_tok_embs, 1)
+                    n_unmasked = attention_mask.sum(dim=1, keepdim=True)
+                    q_emb_1 = masked_emb.sum(dim=1) / n_unmasked
                 case WEIGHT_METHOD.LEARNED:
                     q_tok_weights = torch.nn.functional.softmax(
                         self.tok_embs_avg_weights[input_ids], -1
