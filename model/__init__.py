@@ -256,8 +256,8 @@ class DualEncoder(Ranker):
         opt = torch.optim.AdamW(
             filter(lambda p: p.requires_grad, self.parameters()), lr=self.lr
         )
-        sched = get_constant_schedule_with_warmup(opt, self.warmup_steps)
-        return [opt], [{"scheduler": sched, "interval": "step"}]
+        scheduler = torch.optim.lr_scheduler.LambdaLR(opt, lr_lambda=lambda step: min((step + 1) / self.warmup_steps, 1))
+        return [opt], [{"scheduler": scheduler, "interval": "step", "frequency": 1}]
 
     def training_step(self, batch: TrainingBatch, batch_idx: int) -> torch.Tensor:
         if self.training_mode != TrainingMode.CONTRASTIVE:
