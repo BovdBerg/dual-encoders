@@ -167,6 +167,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         d_embs = self._get_top_docs_embs(queries)
 
         # estimate query embedding as weighted average of q_emb and d_embs
+        print("q_emb_1 shape v d_embs shape:", q_emb_1.shape, d_embs.shape)
         embs = torch.cat((q_emb_1.unsqueeze(1), d_embs), -2).to(self.device)
         embs_weights = torch.zeros((self.n_embs), device=self.device)
         if self.docs_only:
