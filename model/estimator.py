@@ -175,7 +175,8 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         valid_queries_df = queries_df[queries_df["query"].apply(validate_query)].copy()
         invalid_indices = queries_df[~queries_df["query"].apply(validate_query)].index
         if valid_queries_df.empty:
-            raise ValueError("All queries in batch are invalid.")
+            logging.warning("All queries in batch are invalid. Returning q_emb_1.")
+            return q_emb_1
 
         # Initialize d_embs with zeros for invalid queries
         d_embs = self._get_top_docs_embs(valid_queries_df)
