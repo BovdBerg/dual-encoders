@@ -8,6 +8,7 @@ import torch
 from fast_forward.index import Index
 from fast_forward.ranking import Ranking
 from transformers import AutoModel, AutoTokenizer
+import re
 
 EncodingModelBatch = Dict[str, torch.LongTensor]
 
@@ -134,9 +135,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
                     q_tok_weights = torch.nn.functional.softmax(
                         self.tok_embs_avg_weights[input_ids], -1
                     )
-                    q_emb_1 = torch.sum(
-                        q_tok_embs * q_tok_weights.unsqueeze(-1), 1
-                    )
+                    q_emb_1 = torch.sum(q_tok_embs * q_tok_weights.unsqueeze(-1), 1)
             if self.normalize_q_emb_1:
                 q_emb_1 = torch.nn.functional.normalize(q_emb_1)
 
@@ -149,8 +148,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
             if not query or query.strip() == "":
                 return False
             # Check for special characters that might cause parsing issues
-            problem_chars = [';', '"', "'", "/", "?", ":", "&", "|", "!", "(", ")", "[", "]", "{", "}", "^", "~", "*", "\\", "<", ">"]
-            if any(char in query for char in problem_chars):
+            if re.search(r'[;"\'/?&|!(){}\[\]^~*\\<>]', query):
                 return False
             # Check for minimum length
             if len(query.strip()) < 5:
