@@ -100,6 +100,9 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
         # Retrieve top-ranked documents for all queries in batch
         top_docs = self.sparse_index.transform(queries)
+        
+        # Print the amount of documents retrieved for each query
+        print(top_docs["qid"].value_counts())
 
         # Tokenize top_docs texts
         # TODO: use TransformerTokenizer (from estimator.yaml) directly
@@ -114,6 +117,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
         # Encode top_docs_toks with doc_encoder and reshape
         d_embs = self.doc_encoder(d_toks)
+        print(f"Shape of d_embs: {d_embs.shape}")
         d_embs = d_embs.view(len(queries), self.n_docs, -1)
 
         return d_embs
