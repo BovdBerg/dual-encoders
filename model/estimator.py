@@ -168,7 +168,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
         # Initialize d_embs with zeros for invalid queries
         d_embs = self._get_top_docs_embs(valid_queries_df)
-        d_embs_full = torch.zeros((len(queries), 10, 768), device=self.device)
+        d_embs_full = torch.zeros((len(queries), self.n_docs, 768), device=self.device)
         d_embs_full[valid_queries_df.index] = d_embs
 
         # estimate query embedding as weighted average of q_emb and d_embs
