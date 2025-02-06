@@ -119,10 +119,9 @@ class AvgEmbQueryEstimator(torch.nn.Module):
     def forward(self, q_tokens: EncodingModelBatch) -> torch.Tensor:
         input_ids = q_tokens["input_ids"]
         attention_mask = q_tokens["attention_mask"]
-        batch_size = len(input_ids)
 
         if self.docs_only:
-            q_emb_1 = torch.zeros((batch_size, 768))
+            q_emb_1 = torch.zeros((len(input_ids), 768))
         else:
             # estimate lightweight query as weighted average of q_tok_embs
             q_tok_embs = self.tok_embs(input_ids)
@@ -143,9 +142,28 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         if self.q_only:
             return q_emb_1
 
+        # Validate queries to prevent QueryParserException
+        def validate_query(query):
+            # Check if query is empty or only whitespace
+            if not query or query.strip() == "":
+                return False
+            # Check if query ends with an incomplete phrase or special character
+            if query.strip().endswith(":") or query.strip().endswith("?"):
+                return False
+            # Check for special characters that might cause parsing issues
+            if any(char in query for char in [';', '"', "'"]):
+                return False
+            # Check for minimum length
+            if len(query.strip()) < 5:
+                return False
+            return True
+
         # find embeddings of top-ranked documents
         queries = self.tokenizer.batch_decode(input_ids, skip_special_tokens=True)
-        queries = pd.DataFrame({"query": queries, "qid": np.arange(batch_size)})
+        queries = pd.DataFrame({"query": queries, "qid": np.arange(len(queries))})
+        queries = queries[queries["query"].apply(validate_query)]
+        if queries.empty:
+            raise ValueError("All queries in batch are invalid.")
         d_embs = self._get_top_docs_embs(queries)
 
         # estimate query embedding as weighted average of q_emb and d_embs
@@ -160,7 +178,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
             embs_weights[: self.n_embs] = torch.nn.functional.softmax(
                 self.embs_avg_weights[: self.n_embs], 0
             )
-        embs_weights = embs_weights.unsqueeze(0).expand(batch_size, -1)
+        embs_weights = embs_weights.unsqueeze(0).expand(len(queries), -1)
 
         q_emb_2 = torch.sum(embs * embs_weights.unsqueeze(-1), -2)
         if self.normalize_q_emb_2:
