@@ -148,7 +148,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
             if not query or query.strip() == "":
                 return False
             # Check if query ends with an incomplete phrase or special character
-            if query.strip().endswith(":") or query.strip().endswith("?"):
+            if query.strip().endswith(":") or "?" in query:
                 return False
             # Check for special characters that might cause parsing issues
             if any(char in query for char in [';', '"', "'"]):
