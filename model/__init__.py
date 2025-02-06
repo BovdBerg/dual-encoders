@@ -315,7 +315,8 @@ class DualEncoder(Ranker):
         self.kl_div.reset()
 
     def state_dict(self, *args, **kwargs):
-        to_remove = [key for key in state_dict.keys() if key.startswith('query_encoder.doc_encoder.')]
+        sd = super().state_dict(*args, **kwargs)
+        to_remove = [key for key in sd.keys() if key.startswith('query_encoder.doc_encoder.')]
         for key in to_remove:
-            del state_dict[key]
-        return state
+            del sd[key]
+        return sd

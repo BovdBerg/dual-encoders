@@ -214,12 +214,12 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         return self.tok_embs.embedding_dim
 
     def state_dict(self, *args, **kwargs):
+        sd = super().state_dict(*args, **kwargs)
         keys_to_remove = [
             key
-            for key in state_dict.keys()
-            if key.startswith("doc_encoder.")
-            or key.startswith("query_encoder.doc_encoder.")
+            for key in sd.keys()
+            if key.startswith("doc_encoder.") or key.startswith("query_encoder.doc_encoder.")
         ]
         for key in keys_to_remove:
-            del state_dict[key]
-        return state
+            del sd[key]
+        return sd
