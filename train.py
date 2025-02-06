@@ -11,6 +11,7 @@ from pytorch_lightning import seed_everything
 from ranking_utils.model import TrainingMode
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 warnings.filterwarnings(
     "ignore", category=FutureWarning, module="huggingface_hub.file_download"
 )
