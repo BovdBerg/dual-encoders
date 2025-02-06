@@ -160,15 +160,20 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
         # find embeddings of top-ranked documents
         queries = self.tokenizer.batch_decode(input_ids, skip_special_tokens=True)
-        queries = pd.DataFrame({"query": queries, "qid": np.arange(len(queries))})
-        queries = queries[queries["query"].apply(validate_query)]
-        if queries.empty:
+        queries_df = pd.DataFrame({"query": queries, "qid": np.arange(len(queries))})
+        valid_queries_df = queries_df[queries_df["query"].apply(validate_query)]
+        invalid_indices = queries_df[~queries_df["query"].apply(validate_query)].index
+        if valid_queries_df.empty:
             raise ValueError("All queries in batch are invalid.")
-        d_embs = self._get_top_docs_embs(queries)
+
+        # Initialize d_embs with zeros for invalid queries
+        d_embs = self._get_top_docs_embs(valid_queries_df)
+        d_embs_full = torch.zeros((len(queries), 10, 768), device=self.device)
+        d_embs_full[valid_queries_df.index] = d_embs
 
         # estimate query embedding as weighted average of q_emb and d_embs
-        print("q_emb_1 shape v d_embs shape:", q_emb_1.shape, d_embs.shape)
-        embs = torch.cat((q_emb_1.unsqueeze(1), d_embs), -2).to(self.device)
+        q_emb_1 = q_emb_1.unsqueeze(1)
+        embs = torch.cat((q_emb_1, d_embs_full), -2).to(self.device)
         embs_weights = torch.zeros((self.n_embs), device=self.device)
         if self.docs_only:
             embs_weights[0] = 0.0
