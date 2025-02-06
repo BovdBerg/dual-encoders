@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import os
+import warnings
 
 import hydra
 import torch
@@ -10,6 +11,9 @@ from pytorch_lightning import seed_everything
 from ranking_utils.model import TrainingMode
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+warnings.filterwarnings(
+    "ignore", category=FutureWarning, module="huggingface_hub.file_download"
+)
 
 
 @hydra.main(config_path="config", config_name="training", version_base="1.3")
