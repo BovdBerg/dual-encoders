@@ -19,12 +19,6 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 warnings.filterwarnings(
     "ignore", category=FutureWarning, module="huggingface_hub.file_download"
 )
-for metric in ["MAP", "MRR", "NormalizedNDG"]:
-    warnings.filterwarnings(
-        "ignore",
-        message=f"It is recommended to use `self.log('val_Retrieval{metric}', ..., sync_dist=True)` when logging on epoch level in distributed setting to accumulate the metric across devices.",
-        module="pytorch_lightning.trainer.connectors.logger_connector.result"
-    )
 
 
 @hydra.main(config_path="config", config_name="training", version_base="1.3")
