@@ -94,17 +94,17 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
         # Retrieve top-ranked documents for all queries in batch
         d_embs = torch.zeros((len(queries), self.n_docs, 768), device=self.device)
-        for query in queries:
+        for q_no query in enumerate(queries):
             try:
                 top_docs = self.sparse_index.search(query)
             except Exception as e:
                 continue
-            print(f"top_docs: {len(top_docs["doc_id"])}")
+            print(f"top_docs: {len(top_docs)}")
             d_toks = self.doc_tokenizer(top_docs["text"].tolist()).to(self.device)
             print(f"d_toks input_ids: {d_toks["input_ids"].shape}")
-            d_embs[queries.index(query)] = self.doc_encoder(d_toks)#.pooler_output
+            d_embs[q_no] = self.doc_encoder(d_toks)#.pooler_output
         print(f"d_embs:\n{d_embs}")
-        print(f"d_embs shape: {d_embs.shape}")
+        print(f"d_embs shape: {d_embs.shape}") # (batch_size, n_docs, dim)
 
         return d_embs
 
