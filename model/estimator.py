@@ -97,9 +97,10 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         for q_no, query in enumerate(queries):
             try:
                 top_docs = self.sparse_index.search(query)
+                d_texts = top_docs["text"].tolist()
+                d_toks = self.doc_tokenizer(d_texts).to(self.device)
             except Exception as e:
                 continue
-            d_toks = self.doc_tokenizer(top_docs["text"].tolist()).to(self.device)
             d_emb = torch.zeros((self.n_docs, 768), device=self.device)
             d_emb[: len(top_docs)] = self.doc_encoder(d_toks)
             d_embs[q_no] = d_emb
