@@ -102,8 +102,8 @@ class AvgEmbQueryEstimator(torch.nn.Module):
             print(f"top_docs: {len(top_docs)}")
             d_toks = self.doc_tokenizer(top_docs["text"].tolist()).to(self.device)
             d_emb = torch.zeros((self.n_docs, 768), device=self.device)
-            print(f"len(d_toks): {len(d_toks)}")
-            d_emb[: len(d_toks)] = self.doc_encoder(d_toks)
+            print(f"len(d_toks): {len(d_toks["input_ids"])}")
+            d_emb[: len(d_toks["input_ids"])] = self.doc_encoder(d_toks)
             print(f"d_emb: {d_emb.shape}")
             print(f"d_emb: {d_emb}")
             d_embs[q_no] = d_emb
