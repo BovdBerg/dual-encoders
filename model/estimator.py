@@ -5,7 +5,6 @@ from typing import Dict, Optional, Sequence
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 import pyterrier as pt
 import torch
 from fast_forward.index import Index
@@ -95,7 +94,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
         # Retrieve top-ranked documents for all queries in batch
         d_embs = torch.zeros((len(queries), self.n_docs, 768), device=self.device)
-        for q_no, query in tqdm(enumerate(queries), desc="Retrieving top doc embs", total=len(queries)):
+        for q_no, query in enumerate(queries):
             try:
                 top_docs = self.sparse_index.search(query)
             except Exception as e:
