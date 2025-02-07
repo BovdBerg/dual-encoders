@@ -92,45 +92,43 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         assert self.doc_tokenizer is not None, "Provide a doc_tokenizer training."
         assert self.doc_encoder is not None, "Provide a doc_encoder before training."
 
-        # Convert queries to DataFrame
-        queries = pd.DataFrame({"query": queries, "qid": range(len(queries))})
-
-        # Batch search for top documents
-        top_docs_list = self.sparse_index.transform(queries)
-
-        # Flatten the list of top documents
-        all_docs = [doc for top_docs in top_docs_list for doc in top_docs["text"].tolist()]
-
-        # Tokenize all documents in a single batch
-        d_toks = self.doc_tokenizer(all_docs, return_tensors="pt", padding=True, truncation=True).to(self.device)
-
-        # Encode all documents in a single batch
-        all_doc_embs = self.doc_encoder(d_toks).last_hidden_state[:, 0, :]  # Assuming [CLS] token representation
-
-        # Initialize the embeddings tensor
+        # Retrieve top-ranked documents for all queries in batch
         d_embs = torch.zeros((len(queries), self.n_docs, 768), device=self.device)
-
-        # Split the encoded embeddings back into individual queries
-        start_idx = 0
-        for q_no, top_docs in enumerate(top_docs_list):
-            num_docs = len(top_docs)
-            d_embs[q_no, :num_docs] = all_doc_embs[start_idx:start_idx + num_docs]
-            start_idx += num_docs
+        for q_no, query in enumerate(queries):
+            try:
+                top_docs = self.sparse_index.search(query)
+            except Exception as e:
+                continue
+            d_toks = self.doc_tokenizer(top_docs["text"].tolist()).to(self.device)
+            d_emb = torch.zeros((self.n_docs, 768), device=self.device)
+            d_emb[: len(top_docs)] = self.doc_encoder(d_toks)
+            d_embs[q_no] = d_emb
 
         return d_embs
+        # # Convert queries to DataFrame
+        # queries = pd.DataFrame({"query": queries, "qid": range(len(queries))})
 
-        # queries = pd.DataFrame
-        # # Retrieve top-ranked documents for all queries in batch
+        # # Batch search for top documents
+        # top_docs = self.sparse_index.transform(queries)
+
+        # # Flatten the list of top documents
+        # d_texts = [doc for top_docs in top_docs for doc in top_docs["text"].tolist()]
+
+        # # Tokenize all documents in a single batch
+        # d_toks = self.doc_tokenizer(d_texts, return_tensors="pt", padding=True, truncation=True).to(self.device)
+
+        # # Encode all documents in a single batch
+        # all_doc_embs = self.doc_encoder(d_toks).last_hidden_state[:, 0, :]  # Assuming [CLS] token representation
+
+        # # Initialize the embeddings tensor
         # d_embs = torch.zeros((len(queries), self.n_docs, 768), device=self.device)
-        # for q_no, query in enumerate(queries):
-        #     try:
-        #         top_docs = self.sparse_index.search(query)
-        #     except Exception as e:
-        #         continue
-        #     d_toks = self.doc_tokenizer(top_docs["text"].tolist()).to(self.device)
-        #     d_emb = torch.zeros((self.n_docs, 768), device=self.device)
-        #     d_emb[: len(top_docs)] = self.doc_encoder(d_toks)
-        #     d_embs[q_no] = d_emb
+
+        # # Split the encoded embeddings back into individual queries
+        # start_idx = 0
+        # for q_no, top_docs in enumerate(top_docs):
+        #     num_docs = len(top_docs)
+        #     d_embs[q_no, :num_docs] = all_doc_embs[start_idx:start_idx + num_docs]
+        #     start_idx += num_docs
 
         # return d_embs
 
