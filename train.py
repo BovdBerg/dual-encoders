@@ -29,8 +29,7 @@ def main(config: DictConfig) -> None:
         config.training_data,
         data_processor=data_processor,
     )
-    callbacks = config.trainer.get("callbacks", []) + [TQDMProgressBar(refresh_rate=1)]
-    trainer = instantiate(config.trainer, callbacks=callbacks)
+    trainer = instantiate(config.trainer)
     model = instantiate(config.ranker.model)
 
     q_enc = model.query_encoder

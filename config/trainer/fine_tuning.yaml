@@ -18,3 +18,5 @@ callbacks:
     mode: max
     save_top_k: 1
     verbose: True
+  - _target_: pytorch_lightning.callbacks.TQDMProgressBar
+    refresh_rate: 1
