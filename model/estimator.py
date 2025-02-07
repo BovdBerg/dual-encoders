@@ -5,7 +5,7 @@ from typing import Dict, Optional, Sequence
 
 import numpy as np
 import pandas as pd
-import tqdm
+from tqdm import tqdm
 import pyterrier as pt
 import torch
 from fast_forward.index import Index
