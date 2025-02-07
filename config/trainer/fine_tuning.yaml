@@ -11,7 +11,7 @@ callbacks:
   - _target_: pytorch_lightning.callbacks.EarlyStopping
     monitor: val_RetrievalMAP
     mode: max
-    patience: 3
+    patience: 5
     verbose: True
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint
     monitor: val_RetrievalMAP
