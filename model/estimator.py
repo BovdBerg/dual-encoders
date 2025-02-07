@@ -99,11 +99,12 @@ class AvgEmbQueryEstimator(torch.nn.Module):
                 top_docs = self.sparse_index.search(query)
             except Exception as e:
                 continue
-            print(f"top_docs:\n{top_docs}")
+            print(f"top_docs: {len(top_docs["doc_id"])}")
             d_toks = self.doc_tokenizer(top_docs["text"].tolist()).to(self.device)
-            print(f"d_toks input_ids:\n{d_toks["input_ids"].shape}")
+            print(f"d_toks input_ids: {d_toks["input_ids"].shape}")
             d_embs[queries.index(query)] = self.doc_encoder(d_toks)#.pooler_output
         print(f"d_embs:\n{d_embs}")
+        print(f"d_embs shape: {d_embs.shape}")
 
         return d_embs
 
