@@ -106,32 +106,6 @@ class AvgEmbQueryEstimator(torch.nn.Module):
             d_embs[q_no] = d_emb
 
         return d_embs
-        # # Convert queries to DataFrame
-        # queries = pd.DataFrame({"query": queries, "qid": range(len(queries))})
-
-        # # Batch search for top documents
-        # top_docs = self.sparse_index.transform(queries)
-
-        # # Flatten the list of top documents
-        # d_texts = [doc for top_docs in top_docs for doc in top_docs["text"].tolist()]
-
-        # # Tokenize all documents in a single batch
-        # d_toks = self.doc_tokenizer(d_texts, return_tensors="pt", padding=True, truncation=True).to(self.device)
-
-        # # Encode all documents in a single batch
-        # all_doc_embs = self.doc_encoder(d_toks).last_hidden_state[:, 0, :]  # Assuming [CLS] token representation
-
-        # # Initialize the embeddings tensor
-        # d_embs = torch.zeros((len(queries), self.n_docs, 768), device=self.device)
-
-        # # Split the encoded embeddings back into individual queries
-        # start_idx = 0
-        # for q_no, top_docs in enumerate(top_docs):
-        #     num_docs = len(top_docs)
-        #     d_embs[q_no, :num_docs] = all_doc_embs[start_idx:start_idx + num_docs]
-        #     start_idx += num_docs
-
-        # return d_embs
 
     def forward(self, q_tokens: EncodingModelBatch) -> torch.Tensor:
         input_ids = q_tokens["input_ids"]
