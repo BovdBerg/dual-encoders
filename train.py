@@ -2,14 +2,17 @@
 
 import os
 import warnings
+from operator import call
 
 import hydra
 import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from pytorch_lightning import seed_everything
-from model.estimator import AvgEmbQueryEstimator
+from pytorch_lightning.callbacks import TQDMProgressBar
 from ranking_utils.model import TrainingMode
+
+from model.estimator import AvgEmbQueryEstimator
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 # os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
@@ -26,7 +29,8 @@ def main(config: DictConfig) -> None:
         config.training_data,
         data_processor=data_processor,
     )
-    trainer = instantiate(config.trainer)
+    callbacks = config.trainer.get("callbacks", []) + [TQDMProgressBar(refresh_rate=1)]
+    trainer = instantiate(config.trainer, callbacks=callbacks)
     model = instantiate(config.ranker.model)
 
     q_enc = model.query_encoder
