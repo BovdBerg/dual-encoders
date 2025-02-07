@@ -2,7 +2,7 @@ _target_: pytorch_lightning.Trainer
 deterministic: warn
 strategy: ddp_find_unused_parameters_true
 limit_val_batches: 1000
-val_check_interval: 0.1
+val_check_interval: 32
 max_epochs: 50
 precision: 16-mixed
 accumulate_grad_batches: 32
