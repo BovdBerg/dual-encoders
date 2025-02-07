@@ -2,7 +2,7 @@ tokenizer:
   _target_: model.transformer.TransformerTokenizer
   pretrained_model: ${..pretrained_model}
   max_length: null
-  add_special_tokens: True
+  add_special_tokens: False
 
 encoder:
   _target_: model.estimator.AvgEmbQueryEstimator
