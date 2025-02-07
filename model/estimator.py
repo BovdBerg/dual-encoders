@@ -69,6 +69,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         self.tokenizer = AutoTokenizer.from_pretrained(self.pretrained_model)
         self.doc_tokenizer = None
         self.doc_encoder = None
+        self.encode_docs = None
         self.sparse_index = pt.BatchRetrieve.from_dataset(
             "msmarco_passage",
             "terrier_stemmed_text",
@@ -91,6 +92,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
     def _get_top_docs_embs(self, queries: Sequence[str]) -> torch.Tensor:
         assert self.doc_tokenizer is not None, "Provide a doc_tokenizer training."
         assert self.doc_encoder is not None, "Provide a doc_encoder before training."
+        assert self.encode_docs is not None, "Provide a method to encode documents before training."
 
         # Retrieve top-ranked documents for all queries in batch
         d_embs = torch.zeros((len(queries), self.n_docs, 768), device=self.device)
@@ -102,7 +104,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
             d_toks = self.doc_tokenizer(top_docs["text"].tolist()).to(self.device)
             d_emb = torch.zeros((self.n_docs, 768), device=self.device)
             print(f"len(d_toks): {len(d_toks)}")
-            d_emb[: len(d_toks)] = self.doc_encoder(d_toks)
+            d_emb[: len(d_toks)] = self.encode_docs(d_toks)
             print(f"d_emb: {d_emb.shape}")
             print(f"d_emb: {d_emb}")
             d_embs[q_no] = d_emb

@@ -33,6 +33,7 @@ def main(config: DictConfig) -> None:
     if isinstance(q_enc, AvgEmbQueryEstimator):
         q_enc.doc_encoder = model.doc_encoder
         q_enc.doc_tokenizer = data_processor.doc_tokenizer
+        q_enc.encode_docs = model.encode_docs
 
     if config.ckpt_path is not None:
         model.load_state_dict(torch.load(config.ckpt_path)["state_dict"])
