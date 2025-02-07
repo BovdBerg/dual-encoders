@@ -93,10 +93,10 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         assert self.doc_encoder is not None, "Provide a doc_encoder before training."
 
         # Convert queries to DataFrame
-        queries_df = pd.DataFrame(queries, columns=["query"])
+        queries = pd.DataFrame({"query": queries, "qid": range(len(queries))})
 
         # Batch search for top documents
-        top_docs_list = self.sparse_index.transform(queries_df)
+        top_docs_list = self.sparse_index.transform(queries)
 
         # Flatten the list of top documents
         all_docs = [doc for top_docs in top_docs_list for doc in top_docs["text"].tolist()]
