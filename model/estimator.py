@@ -81,7 +81,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         self.tok_embs = model.get_input_embeddings()
 
         vocab_size = self.tokenizer.vocab_size
-        self.tok_embs_weights = torch.nn.Parameter(torch.ones(vocab_size) / vocab_size)
+        self.tok_embs_weights = torch.nn.Parameter(torch.ones(vocab_size))
 
         self.embs_weights = torch.nn.Parameter(torch.ones(self.n_embs) / self.n_embs)
 
