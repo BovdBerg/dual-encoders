@@ -274,6 +274,10 @@ class DualEncoder(Ranker):
 
         return loss
 
+    def on_validation_start(self) -> None:
+        super().on_validation_start()
+        self.trainer.progress_bar_refresh_rate = 1
+
     def validation_step(self, batch: ValTestBatch, batch_idx: int) -> None:
         super().validation_step(batch, batch_idx)
 
