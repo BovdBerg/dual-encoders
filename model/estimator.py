@@ -93,9 +93,13 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         embs: torch.tensor,
         init_weights: torch.tensor,
         mask: torch.tensor,
+        softmax: bool,
     ) -> torch.Tensor:
         weights = init_weights * mask  # Mask padding
-        weights = weights / (weights.sum(dim=-1, keepdim=True) + 1e-8)  # Normalize
+        if softmax:
+            weights = torch.nn.functional.softmax(weights, dim=-1)  # Positive and sum to 1
+        else:
+            weights = weights / (weights.sum(dim=-1, keepdim=True) + 1e-8)  # Normalize
 
         embs = embs * weights.unsqueeze(-1)  # Apply weights
         q_estimation = embs.sum(-2)  # Compute weighted sum
@@ -134,7 +138,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
             case WEIGHT_METHOD.WEIGHTED:
                 q_tok_weights = self.tok_embs_weights[input_ids]
         q_tok_mask = q_tokens["attention_mask"]  # (batch_size, max_len)
-        q_emb_1 = self.compute_weighted_average(q_tok_embs, q_tok_weights, q_tok_mask)
+        q_emb_1 = self.compute_weighted_average(q_tok_embs, q_tok_weights, q_tok_mask, False)
         if self.q_only:
             return q_emb_1
 
@@ -151,7 +155,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
                 embs_weights = self.embs_weights.unsqueeze(0).expand(batch_size, -1) # (batch_size, n_embs), repeated values
         embs_mask = torch.ones((batch_size, self.n_embs), device=self.device)  # (batch_size, n_embs), 1 for each non-zero emb
         embs_mask[:, 1:] = torch.any(top_docs_embs != 0, dim=-1)  # Set empty doc embs to 0
-        q_emb_2 = self.compute_weighted_average(embs, embs_weights, embs_mask)
+        q_emb_2 = self.compute_weighted_average(embs, embs_weights, embs_mask, True)
         return q_emb_2
 
     @property
