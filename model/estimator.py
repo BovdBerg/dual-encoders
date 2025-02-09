@@ -95,7 +95,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         mask: torch.tensor,
     ) -> torch.Tensor:
         weights = init_weights * mask  # Mask padding
-        weights = weights / weights.sum(dim=-1, keepdim=True)  # Normalize
+        weights = weights / (weights.sum(dim=-1, keepdim=True) + 1e-8)  # Normalize
 
         embs = embs * weights.unsqueeze(-1)  # Apply weights
         q_estimation = embs.sum(-2)  # Compute weighted sum
