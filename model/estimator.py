@@ -93,21 +93,21 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         assert self.doc_encoder is not None, "Provide a doc_encoder before training."
 
         # Retrieve top-ranked documents for all queries in batch
-        d_embs = torch.zeros((len(queries), self.n_docs, 768), device=self.device)
+        top_docs_embs = torch.zeros((len(queries), self.n_docs, 768), device=self.device)
         for q_no, query in enumerate(queries):
             try:
-                top_docs = self.sparse_index.search(query)
-                if "text" not in top_docs.keys():
+                q_top_docs = self.sparse_index.search(query)
+                if "text" not in q_top_docs.keys():
                     continue
-                d_texts = top_docs["text"].tolist()
-                d_toks = self.doc_tokenizer(d_texts).to(self.device)
+                q_top_docs_texts = q_top_docs["text"].tolist()
+                q_top_docs_toks = self.doc_tokenizer(q_top_docs_texts).to(self.device)
             except Exception as e:
                 continue
-            d_emb = torch.zeros((self.n_docs, 768), device=self.device)
-            d_emb[: len(top_docs)] = self.doc_encoder(d_toks)
-            d_embs[q_no] = d_emb
+            q_top_docs_embs = torch.zeros((self.n_docs, 768), device=self.device)
+            q_top_docs_embs[: len(q_top_docs)] = self.doc_encoder(q_top_docs_toks)
+            top_docs_embs[q_no] = q_top_docs_embs
 
-        return d_embs
+        return top_docs_embs
 
     def forward(self, q_tokens: EncodingModelBatch) -> torch.Tensor:
         input_ids = q_tokens["input_ids"]
