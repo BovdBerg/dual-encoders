@@ -84,7 +84,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         vocab_size = self.tokenizer.vocab_size
         self.tok_embs_weights = torch.nn.Parameter(torch.randn(vocab_size) * 0.01)
 
-        self.embs_weights = torch.nn.Parameter(torch.ones(self.n_embs) / self.n_embs)
+        self._embs_weights = torch.nn.Parameter(torch.ones(self.n_embs) / self.n_embs)
 
         if ckpt_path_tok_embs:
             # Load tok_embs checkpoint, use its params, and freeze tok_embs
@@ -98,18 +98,22 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         self.to(self.device)
         self.eval()
 
+    @property
+    def embs_weights(self) -> torch.Tensor:
+        return torch.nn.functional.softmax(self._embs_weights, dim=-1)
+
+    @embs_weights.setter
+    def embs_weights(self, embs_weights: torch.Tensor) -> None:
+        self._embs_weights = embs_weights
+
     def compute_weighted_average(
         self,
         embs: torch.tensor,
         init_weights: torch.tensor,
         mask: torch.tensor,
-        softmax: bool,
     ) -> torch.Tensor:
         weights = init_weights * mask  # Mask padding
-        if softmax:
-            weights = torch.nn.functional.softmax(weights, dim=-1)  # Positive and sum to 1
-        else:
-            weights = weights / (weights.sum(dim=-1, keepdim=True) + 1e-8)  # Normalize
+        weights = weights / (weights.sum(dim=-1, keepdim=True) + 1e-8)  # Normalize
 
         embs = embs * weights.unsqueeze(-1)  # Apply weights
         q_estimation = embs.sum(-2)  # Compute weighted sum
@@ -147,8 +151,9 @@ class AvgEmbQueryEstimator(torch.nn.Module):
                 q_tok_weights = torch.ones_like(input_ids, dtype=torch.float) / max_len
             case WEIGHT_METHOD.WEIGHTED:
                 q_tok_weights = self.tok_embs_weights[input_ids]
+                q_tok_weights = torch.nn.functional.softmax(q_tok_weights, dim=-1)  # Positive and sum to 1
         q_tok_mask = q_tokens["attention_mask"]  # (batch_size, max_len)
-        q_emb_1 = self.compute_weighted_average(q_tok_embs, q_tok_weights, q_tok_mask, False)
+        q_emb_1 = self.compute_weighted_average(q_tok_embs, q_tok_weights, q_tok_mask)
         if self.q_only:
             return q_emb_1
 
@@ -165,7 +170,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
                 embs_weights = self.embs_weights.unsqueeze(0).expand(batch_size, -1) # (batch_size, n_embs), repeated values
         embs_mask = torch.ones((batch_size, self.n_embs), device=self.device)  # (batch_size, n_embs), 1 for each non-zero emb
         embs_mask[:, 1:] = torch.any(top_docs_embs != 0, dim=-1)  # Set empty doc embs to 0
-        q_emb_2 = self.compute_weighted_average(embs, embs_weights, embs_mask, True)
+        q_emb_2 = self.compute_weighted_average(embs, embs_weights, embs_mask)
         return q_emb_2
 
     @property
