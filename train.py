@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import logging
 import os
 import warnings
 from operator import call
@@ -19,6 +20,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 warnings.filterwarnings(
     "ignore", category=FutureWarning, module="huggingface_hub.file_download"
 )
+logging.getLogger("org.terrier").setLevel(logging.ERROR)
 
 
 @hydra.main(config_path="config", config_name="training", version_base="1.3")
