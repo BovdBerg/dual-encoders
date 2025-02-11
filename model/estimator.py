@@ -88,7 +88,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
         if ckpt_path_tok_embs:
             # Load tok_embs checkpoint, use its params, and freeze tok_embs
-            ckpt = torch.load(ckpt_path_tok_embs, map_location=device)
+            ckpt = torch.load(ckpt_path_tok_embs, map_location=self.device)
             for k, v in ckpt["state_dict"].items():
                 if k == "query_encoder.embeddings.weight":
                     self.tok_embs.weight.data.copy_(v)
