@@ -116,6 +116,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         weights = weights / (weights.sum(dim=-1, keepdim=True) + 1e-8)  # Normalize
 
         embs = embs * weights.unsqueeze(-1)  # Apply weights
+        # TODO: normalize embs?
         q_estimation = embs.sum(-2)  # Compute weighted sum
         return q_estimation
 
@@ -146,6 +147,7 @@ class AvgEmbQueryEstimator(torch.nn.Module):
 
         # Estimate lightweight query as (weighted) average of q_tok_embs, excluding padding
         q_tok_embs = self.tok_embs(input_ids)  # Get token embeddings
+        # TODO [out of scope]: Probably good use to remove stopwords before averaging.
         match self.tok_embs_w_method:  # q_tok_weights: (batch_size, max_len)
             case WEIGHT_METHOD.UNIFORM:
                 q_tok_weights = torch.ones_like(input_ids, dtype=torch.float) / max_len
