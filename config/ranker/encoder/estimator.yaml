@@ -9,7 +9,6 @@ encoder:
   pretrained_model: ${..pretrained_model}
   n_docs: 10
   tok_embs_w_method: UNIFORM
-  ckpt_path_tok_embs: /home/bovandenberg/models/emb_bert.ckpt
   embs_w_method: WEIGHTED
   q_only: False
 

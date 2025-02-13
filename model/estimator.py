@@ -47,7 +47,6 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         tok_embs_w_method: str = "WEIGHTED",
         embs_w_method: str = "WEIGHTED",
         q_only: bool = False,
-        ckpt_path_tok_embs: Optional[str] = None,
     ) -> None:
         """Constructor.
 
@@ -85,15 +84,6 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         self.tok_embs_weights = torch.nn.Parameter(torch.randn(vocab_size) * 0.01)
 
         self._embs_weights = torch.nn.Parameter(torch.ones(self.n_embs) / self.n_embs)
-
-        if ckpt_path_tok_embs:
-            # Load tok_embs checkpoint, use its params, and freeze tok_embs
-            ckpt = torch.load(ckpt_path_tok_embs, map_location=self.device)
-            for k, v in ckpt["state_dict"].items():
-                if k == "query_encoder.embeddings.weight":
-                    self.tok_embs.weight.data.copy_(v)
-                    break
-            self.tok_embs.requires_grad = False  # TODO [important]: remove line when more confident in correct tok_embs training.
 
         self.to(self.device)
         self.eval()
