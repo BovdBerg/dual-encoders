@@ -118,6 +118,8 @@ class AvgEmbQueryEstimator(torch.nn.Module):
         for q_no, query in enumerate(queries):
             try:
                 q_top_docs = self.sparse_index.search(query)
+                if len(q_top_docs) == 0:
+                    continue
                 if "text" not in q_top_docs.keys():
                     continue
                 q_top_docs_texts = q_top_docs["text"].tolist()
