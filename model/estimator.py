@@ -106,17 +106,16 @@ class AvgEmbQueryEstimator(torch.nn.Module):
     def embs_weights(self, embs_weights: torch.Tensor) -> None:
         self._embs_weights = embs_weights
 
-    def compute_weighted_average(
+    def compute_query(
         self,
         embs: torch.tensor,
         init_weights: torch.tensor,
         mask: torch.tensor,
     ) -> torch.Tensor:
         weights = init_weights * mask  # Mask padding
-        weights = weights / (weights.sum(dim=-1, keepdim=True) + 1e-8)  # Normalize
+        weights = weights / weights.sum(dim=-1, keepdim=True)  # Normalize
 
         embs = embs * weights.unsqueeze(-1)  # Apply weights
-        # TODO: normalize embs?
         q_estimation = embs.sum(-2)  # Compute weighted sum
         return q_estimation
 
@@ -155,16 +154,16 @@ class AvgEmbQueryEstimator(torch.nn.Module):
                 q_tok_weights = self.tok_embs_weights[input_ids]
                 q_tok_weights = torch.nn.functional.softmax(q_tok_weights, dim=-1)  # Positive and sum to 1
         q_tok_mask = q_tokens["attention_mask"]  # (batch_size, max_len)
-        q_emb_1 = self.compute_weighted_average(q_tok_embs, q_tok_weights, q_tok_mask)
+        q_light = self.compute_query(q_tok_embs, q_tok_weights, q_tok_mask)
         if self.q_only:
-            return q_emb_1
+            return q_light
 
         # Find top-ranked document embeddings
         queries = self.tokenizer.batch_decode(input_ids, skip_special_tokens=True)
         top_docs_embs = self._get_top_docs_embs(queries)
 
         # Estimate final query as (weighted) average of q_emb_1 ++ top_docs_embs
-        embs = torch.cat((q_emb_1.unsqueeze(1), top_docs_embs), -2) # (batch_size, n_embs, emb_dim)
+        embs = torch.cat((q_light.unsqueeze(1), top_docs_embs), -2) # (batch_size, n_embs, emb_dim)
         match self.embs_w_method:  # embs_weights: (batch_size, n_embs)
             case WEIGHT_METHOD.UNIFORM:
                 embs_weights = torch.ones((batch_size, self.n_embs), device=self.device) / self.n_embs
@@ -172,8 +171,8 @@ class AvgEmbQueryEstimator(torch.nn.Module):
                 embs_weights = self.embs_weights.unsqueeze(0).expand(batch_size, -1) # (batch_size, n_embs), repeated values
         embs_mask = torch.ones((batch_size, self.n_embs), device=self.device)  # (batch_size, n_embs), 1 for each non-zero emb
         embs_mask[:, 1:] = torch.any(top_docs_embs != 0, dim=-1)  # Set empty doc embs to 0
-        q_emb_2 = self.compute_weighted_average(embs, embs_weights, embs_mask)
-        return q_emb_2
+        q_estimation = self.compute_query(embs, embs_weights, embs_mask)
+        return q_estimation
 
     @property
     def embedding_dimension(self) -> int:
